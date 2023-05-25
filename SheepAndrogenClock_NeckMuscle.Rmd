@@ -1,0 +1,110 @@
+---
+title: "Sheep Androgen Clock, 5% error, BBA-seq, Applied to sheep muscle"
+author: "Victoria Sugrue"
+date: 'Last updated: 22 May 2023'
+output:
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_float: yes
+    toc_depth: 6
+  pdf_document:
+    toc: yes
+    toc_depth: 5
+    df_print: kable
+    latex_engine: xelatex
+subtitle: ' '
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Load required packages
+```{r}
+library(ggplot2)
+library(caret)
+library(dplyr)
+library(Manu)
+library(knitr)
+library(lmtest)
+library(Amelia)
+library(mlbench)
+library(ggfortify)
+```
+
+### Data preparation
+```{r}
+sheep_data <- read.csv("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Bioinformatics/Data/SheepSampleSheet.csv")
+neck <- read.csv("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Bioinformatics/Data/NeckData.csv")
+neck$Beta <- neck$Methylation/100
+neck$A <- "A"
+
+# Setting AndroAge with predicted time of puberty onset = age minus 0.5 years (i.e estimate to reach puberty at 6 months)
+sheep_data$YPMP <- sheep_data$Age-0.5
+sheep_data$YPMP[sheep_data$Castration_Sex=="Wether"] <- 0
+sheep_data$YPMP[sheep_data$Castration_Sex=="Ewe"] <- 0
+
+# Creating a new column for methylation in the form of a beta value
+sheep_data$Beta <- sheep_data$CG_Methylation/100
+
+# Subset by sex/castration status
+ram_data <- sheep_data %>% filter(Castration_Sex=="Ram")
+wether_data <- sheep_data %>% filter(Castration_Sex=="Wether")
+ewe_data <- sheep_data %>% filter(Castration_Sex=="Ewe")
+
+```
+
+
+# Fitting the Androgen Clock to rams
+
+```{r}
+ram_data_5 <- ram_data %>% filter(CG_Calls>=497)
+```
+
+
+```{r}
+# Run model, 5% error
+model_5p <- lm(YPMP ~ Beta, data=ram_data_5)
+summary(model_5p)
+```
+
+# Applying to model
+```{r}
+neck$Model_AndroAge <- predict(model_5p, newdata = neck)
+```
+
+## Plot
+```{r}
+neckAndroAge <- ggplot(neck, aes(x=A, y=Model_AndroAge, colour=Group)) +
+  geom_jitter(width=0.5, size=6, alpha=2/3) +
+  theme_light() + 
+  ylab("AndroAge") +
+    theme(axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(),
+          axis.title.x = element_blank()) +
+  scale_colour_manual(values = get_pal("Takahe")[c(1,2)])
+neckAndroAge
+
+ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/neck_AndroAge.png",neckAndroAge, width=4, height = 10, dpi=1000)
+```
+
+
+```{r}
+neck$A <- "A"
+
+neckmeth <- ggplot(neck, aes(x=A, y=Methylation, colour=Group)) +
+  geom_jitter(width=0.5, size=6, alpha=3/4) +
+  scale_colour_manual(values = get_pal("Takahe")[c(1,2)]) +
+  theme_light() +
+  ylab("Methylation (%)") +
+  theme(axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(),
+          axis.title.x = element_blank()) +
+  scale_y_continuous(breaks = seq(30, 70, 5))
+
+
+neckmeth
+ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/neck_methylation.png",neckmeth, width=4, height = 10, dpi=1000)
+```

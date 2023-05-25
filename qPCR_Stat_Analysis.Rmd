@@ -1,0 +1,455 @@
+---
+title: "qPCR stat analysis"
+author: "Victoria Sugrue"
+date: 'Last updated: 19 May 2023'
+output:
+  word_document:
+    toc: no
+    toc_depth: '6'
+  html_document:
+    toc: no
+    toc_float: yes
+    toc_depth: 6
+  pdf_document:
+    toc: no
+    toc_depth: 5
+    df_print: kable
+    latex_engine: xelatex
+subtitle: ' '
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load required packages
+```{r}
+#load required packages
+library(dplyr)
+library(ggplot2)
+library(cowplot)
+library(Manu)
+library(car)
+```
+
+# Data preparation
+```{r}
+#load data
+qPCR_pfaffl <- read.csv("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Bioinformatics/Data/qPCR_Pfaffl_Summary2.csv")
+qPCR_pfaffl <- qPCR_pfaffl %>% filter(!(Tissue=="Cortex" | Tissue=="Hypothalamus"))
+qPCR_pfaffl$Group[qPCR_pfaffl$Group=="Blank"] <- "Control"
+
+
+qPCR_pfaffl$log2 <- log2(qPCR_pfaffl$GeneExpressionRatio)
+
+MKLN1data <- qPCR_pfaffl %>% filter(GeneOfInterest=="MKLN1")
+Rikdata <- qPCR_pfaffl %>% filter(GeneOfInterest=="Rik")
+```
+
+# MKLN1
+## Ear
+```{r}
+MKLN1ear <- MKLN1data %>% filter(Tissue=="Ear")
+levene_MKLN1ear = leveneTest(log2 ~ Group, MKLN1ear)
+print(levene_MKLN1ear)
+# p=0.767. Equal
+t.test(log2 ~ Group, data=MKLN1ear, paired=TRUE, var.equal=TRUE)
+# p=0.099. Not significant
+```
+
+## Tail
+```{r}
+MKLN1tail <- MKLN1data %>% filter(Tissue=="Tail")
+levene_MKLN1tail = leveneTest(log2 ~ Group, MKLN1tail)
+print(levene_MKLN1tail)
+# p=0.213. Equal
+t.test(log2 ~ Group, data=MKLN1tail, paired=TRUE, var.equal=TRUE)
+# p=0.358. Not significant
+```
+
+## Muscle
+```{r}
+MKLN1muscle <- MKLN1data %>% filter(Tissue=="Muscle")
+levene_MKLN1muscle = leveneTest(log2 ~ Group, MKLN1muscle)
+print(levene_MKLN1muscle)
+# p=0.314. Equal
+t.test(log2 ~ Group, data=MKLN1muscle, paired=TRUE, var.equal=TRUE)
+# p=0.335. Not significant
+```
+
+## Liver
+```{r}
+MKLN1liver <- MKLN1data %>% filter(Tissue=="Liver")
+levene_MKLN1liver = leveneTest(log2 ~ Group, MKLN1liver)
+print(levene_MKLN1liver)
+# p=0.679. Equal
+t.test(log2 ~ Group, data=MKLN1liver, paired=TRUE, var.equal=TRUE)
+# p=0.151. Not significant
+```
+
+## Kidney
+```{r}
+MKLN1kidney <- MKLN1data %>% filter(Tissue=="Kidney")
+levene_MKLN1kidney = leveneTest(log2 ~ Group, MKLN1kidney)
+print(levene_MKLN1kidney)
+# p=0.037. NOT equal
+t.test(log2 ~ Group, data=MKLN1kidney, paired=TRUE, var.equal=FALSE)
+# p=0.383. Not significant
+```
+
+# Rik/pair
+## Ear
+```{r}
+Rikear <- Rikdata %>% filter(Tissue=="Ear")
+levene_Rikear = leveneTest(log2 ~ Group, Rikear)
+print(levene_Rikear)
+# p=0.878. Equal
+t.test(log2 ~ Group, data=Rikear, paired=TRUE, var.equal=TRUE)
+# p=0.123. Not significant
+```
+
+## Tail
+```{r}
+Riktail <- Rikdata %>% filter(Tissue=="Tail")
+levene_Riktail = leveneTest(log2 ~ Group, Riktail)
+print(levene_Riktail)
+# p=0.444. Equal
+t.test(log2 ~ Group, data=Riktail, paired=TRUE, var.equal=TRUE)
+# p=0.493. Not significant
+```
+
+## Muscle
+```{r}
+Rikmuscle <- Rikdata %>% filter(Tissue=="Muscle")
+levene_Rikmuscle = leveneTest(log2 ~ Group, Rikmuscle)
+print(levene_Rikmuscle)
+# p=0.260. Equal
+t.test(log2 ~ Group, data=Rikmuscle, paired=TRUE, var.equal=TRUE)
+# p=0.334. Not significant
+```
+
+## Liver
+```{r}
+Rikliver <- Rikdata %>% filter(Tissue=="Liver")
+levene_Rikliver = leveneTest(log2 ~ Group, Rikliver)
+print(levene_Rikliver)
+# p=0.052. Equal (just, try both)
+t.test(log2 ~ Group, data=Rikliver, paired=TRUE, var.equal=TRUE)
+# p=0.279. Not significant
+t.test(log2 ~ Group, data=Rikliver, paired=TRUE, var.equal=FALSE)
+# p=0.279. Not significant
+```
+
+## Kidney
+```{r}
+Rikkidney <- Rikdata %>% filter(Tissue=="Kidney")
+levene_Rikkidney = leveneTest(log2 ~ Group, Rikkidney)
+print(levene_Rikkidney)
+# p=0.612. Equal
+t.test(log2 ~ Group, data=Rikkidney, paired=TRUE, var.equal=TRUE)
+# p=0.02. Signficant! 
+
+```
+
+# Plotting
+```{r}
+#isolate means
+MKLN1mean <- as.data.frame(MKLN1data) %>% filter(!(Average)%in%NA)
+Rikmean <- as.data.frame(Rikdata) %>% filter(!(Average)%in%NA)
+```
+
+## Plot MKLN1, log2 y axis
+```{r}
+plotMKLN1_log <- ggplot(MKLN1mean, aes(x=Tissue, y=Average, colour=Group)) + geom_boxplot() +
+  geom_point(MKLN1data, mapping=aes(x=Tissue, y=GeneExpressionRatio, colour=Group), position=position_dodge(width=0.7), alpha=2/3) +
+  theme_light() +
+  scale_colour_manual(values = get_pal("Takahe")[c(1,2)]) +
+  ylab("Fold change") +
+    theme(legend.position = "none") +
+  ggtitle("Mkln1") +
+  coord_trans(y="log2")
+plotMKLN1_log
+```
+
+## Plot Rik/Pair, log2 y axis
+```{r}
+plotRik_log <- ggplot(Rikmean, aes(x=Tissue, y=Average, colour=Group)) + geom_boxplot() +
+  geom_point(Rikdata, mapping=aes(x=Tissue, y=GeneExpressionRatio, colour=Group), position=position_dodge(width=0.7), alpha=2/3) +
+  theme_light() +
+  scale_colour_manual(values = get_pal("Takahe")[c(1,2)]) +
+  ylab("Fold change") +
+  labs(title = "2210408F21Rik/Pair") +
+    theme(legend.position = "none") +
+  coord_trans(y="log2") + 
+  annotate("segment", x = 1.6, xend = 2.4, y = 4.4, yend = 4.4, color = "black", linewidth = 0.5) +
+    annotate("text", x = 2, y = 4.7, label = "***", size = 5)  +
+  ylim(0.5,5)
+plotRik_log
+```
+
+## Plot together
+```{r}
+qPCR_summaryplot_log2 <- cowplot::plot_grid(plotRik_log, plotMKLN1_log, nrow=2, labels=c("A", "B"))
+qPCR_summaryplot_log2
+
+legend_b <- get_legend(
+  plotRik_log + guides(color = guide_legend(nrow = 1)) +
+    theme(legend.position = "bottom"))
+
+qPCR_summaryplot_log2_b <- cowplot::plot_grid(qPCR_summaryplot_log2, legend_b, ncol=1, rel_heights = c(1,0.1))
+qPCR_summaryplot_log2_b
+
+ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/qPCR_summaryPlots_Pfaffl_log2.png", qPCR_summaryplot_log2_b, width=7, height=5, dpi=500)
+```
+
+### Plot standard curves
+```{r}
+curvedata1 <- read.csv("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Bioinformatics/Data/qPCR_PrimerEfficiency_StdCurve.csv")
+curvedata <- curvedata1 %>% select(Gene, Average.CT, Log.Sample.Quantity.)
+curvedata <- as.data.frame(curvedata) %>% filter(!(Log.Sample.Quantity.)%in%NA)
+
+MKLN1curve <- curvedata %>% filter(Gene=="MKLN1")
+Rikcurve <- curvedata %>% filter(Gene=="Rik")
+PGK1curve <- curvedata %>% filter(Gene=="PGK1")
+
+# plot MKLN1 standard curve
+plotMKLN1c <- ggplot(MKLN1curve, aes(x=Average.CT, y=Log.Sample.Quantity.)) +
+  geom_point(size=5, colour="#313657") +
+  geom_smooth(method="lm", se=F, colour="#DD3C51") +
+  theme_light() +
+  ylab("Sample quantity") +
+  xlab("Average CT") +
+  ggtitle("MKLN1") +
+  ylim(-4,0) +
+  xlim(18,37) +
+  geom_text(label="y = -0.359x + 7.4498, r2 = 0.9952", x=Inf, y=Inf, vjust=2, hjust=1.05) 
+plotMKLN1c
+
+# plot Rik standard curve
+plotRikc <- ggplot(Rikcurve, aes(x=Average.CT, y=Log.Sample.Quantity.)) +
+  geom_point(size=5, colour="#313657") +
+  geom_smooth(method="lm", se=F, colour="#DD3C51") +
+  theme_light() +
+  ylab("Sample quantity") +
+  xlab("Average CT") +
+  ggtitle("2210408F21Rik") +
+  ylim(-4,0) +
+  xlim(18,37) +
+  geom_text(label="y = -0.3035x + 6.6743, r2 = 0.9958", x=Inf, y=Inf, vjust=2, hjust=1.05) 
+plotRikc
+
+# plot PGK1 standard curve
+plotPGK1c <- ggplot(PGK1curve, aes(x=Average.CT, y=Log.Sample.Quantity.)) +
+  geom_point(size=5, colour="#313657") +
+  geom_smooth(method="lm", se=F, colour="#DD3C51") +
+  theme_light() +
+  ylab("Sample quantity") +
+  xlab("Average CT") +
+  ggtitle("PGK1") +
+  ylim(-4,0) +
+  xlim(18,37) +
+  geom_text(label="y = -0.3308x + 5.9277, r2 = 0.9991", x=Inf, y=Inf, vjust=2, hjust=1.05) 
+plotPGK1c
+
+qPCR_stdcurve <- cowplot::plot_grid(plotRikc, plotMKLN1c, plotPGK1c, nrow=1)
+qPCR_stdcurve
+
+ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/qPCR_Pfaffl_StdCurves.png", qPCR_stdcurve, width=12, height=4, dpi=500)
+```
+
+# Comparing DNA methylation and expression
+
+```{r}
+qPCR_pfaffl$log2 <- log2(qPCR_pfaffl$GeneExpressionRatio)
+```
+
+
+```{r}
+data2 <- read.csv("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Bioinformatics/Data/Corr_Methylation_Expression.csv")
+data2$Group[data2$Group=="Blank"] <- "Control"
+
+MKLN1_data <- data2 %>% filter(Target=="MKLN1")
+Rik_data <- data2 %>% filter(Target=="Rik")
+
+MKLN1_Ear <- MKLN1_data %>% filter(Tissue=="Ear")
+MKLN1_Ear$log2 <- log2(MKLN1_Ear$GeneExpressionRatio)
+
+cor.test(MKLN1_Ear$log2, MKLN1_Ear$Methylation, method="pearson")
+p2_log2 <- ggplot(MKLN1_Ear, aes(x=log2, y=Methylation, colour=Group)) +
+  geom_point(size=3) +
+  geom_smooth(method='lm', se= F, size = 0.6, colour="Black", aes(group=1)) +
+  labs(title="", subtitle="Ear, cor=-0.645, p=0.084") +
+  xlab("Gene Expression Ratio (log2)") +
+  ylab("Methylation (%)") +
+  theme_light() +
+  theme(legend.position = "none")+
+  scale_colour_manual(values = get_pal("Takahe")[c(1,2)])
+```
+
+
+```{r}
+MKLN1_Kidney <- MKLN1_data %>% filter(Tissue=="Kidney")
+MKLN1_Kidney$log2 <- log2(MKLN1_Kidney$GeneExpressionRatio)
+
+cor.test(MKLN1_Kidney$log2, MKLN1_Kidney$Methylation, method="pearson")
+p4_log2 <- ggplot(MKLN1_Kidney, aes(x=log2, y=Methylation, colour=Group)) +
+  geom_point(size=3) +
+  geom_smooth(method='lm', se= F, size = 0.6, colour="Black", aes(group=1)) +
+  labs(title="", subtitle="Kidney, cor=-0.433, p=0.283") +
+  xlab("Gene Expression Ratio (log2)") +
+  ylab("Methylation (%)") +
+  theme_light() +
+  theme(legend.position = "none") +
+  scale_colour_manual(values = get_pal("Takahe")[c(1,2)])
+```
+
+
+```{r}
+MKLN1_Liver <- MKLN1_data %>% filter(Tissue=="Liver")
+MKLN1_Liver$log2 <- log2(MKLN1_Liver$GeneExpressionRatio)
+
+cor.test(MKLN1_Liver$log2, MKLN1_Liver$Methylation, method="pearson")
+p5_log2 <- ggplot(MKLN1_Liver, aes(x=log2, y=Methylation, colour=Group)) +
+  geom_point(size=3) +
+  geom_smooth(method='lm', se= F, size = 0.6, colour="Black", aes(group=1)) +
+  labs(title="", subtitle="Liver, cor=0.324, p=0.432") +
+  xlab("Gene Expression Ratio (log2)") +
+  ylab("Methylation (%)") +
+  theme_light() +
+  theme(legend.position = "none") +
+  scale_colour_manual(values = get_pal("Takahe")[c(1,2)])
+```
+
+
+```{r}
+MKLN1_Muscle <- MKLN1_data %>% filter(Tissue=="Muscle")
+MKLN1_Muscle$log2 <- log2(MKLN1_Muscle$GeneExpressionRatio)
+
+cor.test(MKLN1_Muscle$log2, MKLN1_Muscle$Methylation, method="pearson")
+p6_log2 <- ggplot(MKLN1_Muscle, aes(x=log2, y=Methylation, colour=Group)) +
+  geom_point(size=3) +
+  geom_smooth(method='lm', se= F, size = 0.6, colour="Black", aes(group=1)) +
+  labs(title="", subtitle="Muscle, cor=0.655, p=0.077") +
+  xlab("Gene Expression Ratio (log2)") +
+  ylab("Methylation (%)") +
+  theme_light() +
+  theme(legend.position = "none")+
+  scale_colour_manual(values = get_pal("Takahe")[c(1,2)])
+```
+
+
+```{r}
+MKLN1_Tail <- MKLN1_data %>% filter(Tissue=="Tail")
+MKLN1_Ear$log2 <- log2(MKLN1_Ear$GeneExpressionRatio)
+
+cor.test(MKLN1_Tail$GeneExpressionRatio, MKLN1_Tail$Methylation, method="pearson")
+p7_log2 <- ggplot(MKLN1_Tail, aes(x=GeneExpressionRatio, y=Methylation, colour=Group)) +
+  geom_point(size=3) +
+  geom_smooth(method='lm', se= F, size = 0.6, colour="Black", aes(group=1)) +
+  labs(title="", subtitle="Tail, cor=0.132, p=0.754") +
+  xlab("Gene Expression Ratio (log2)") +
+  ylab("Methylation (%)") +
+  theme_light() +
+  theme(legend.position = "none")+
+  scale_colour_manual(values = get_pal("Takahe")[c(1,2)])
+```
+
+
+```{r}
+Rik_Ear <- Rik_data %>% filter(Tissue=="Ear")
+Rik_Ear$log2 <- log2(Rik_Ear$GeneExpressionRatio)
+
+cor.test(Rik_Ear$log2, Rik_Ear$Methylation, method="pearson")
+p9_log2 <- ggplot(Rik_Ear, aes(x=log2, y=Methylation, colour=Group)) +
+  geom_point(size=3) +
+  geom_smooth(method='lm', se= F, size = 0.6, colour="Black", aes(group=1)) +
+  labs(title="", subtitle="Ear, cor=-0.504, p=0.202") +
+  xlab("Gene Expression Ratio (log2)") +
+  ylab("Methylation (%)") +
+  theme_light() +
+  theme(legend.position = "none")+
+  scale_colour_manual(values = get_pal("Takahe")[c(1,2)])
+```
+
+
+```{r}
+Rik_Kidney <- Rik_data %>% filter(Tissue=="Kidney")
+Rik_Kidney$log2 <- log2(Rik_Kidney$GeneExpressionRatio)
+
+cor.test(Rik_Kidney$log2, Rik_Kidney$Methylation, method="pearson")
+p11_log2 <- ggplot(Rik_Kidney, aes(x=log2, y=Methylation, colour=Group)) +
+  geom_point(size=3) +
+  geom_smooth(method='lm', se= F, size = 0.6, colour="Black", aes(group=1)) +
+  labs(title="", subtitle="Kidney, cor=-0.816, p=0.013") +
+  xlab("Gene Expression Ratio (log2)") +
+  ylab("Methylation (%)") +
+  theme_light() +
+  theme(legend.position = "none")+
+  scale_colour_manual(values = get_pal("Takahe")[c(1,2)])
+```
+
+
+```{r}
+Rik_Liver <- Rik_data %>% filter(Tissue=="Liver")
+Rik_Liver$log2 <- log2(Rik_Liver$GeneExpressionRatio)
+
+cor.test(Rik_Liver$log2, Rik_Liver$Methylation , method="pearson")
+p12_log2 <- ggplot(Rik_Liver, aes(x=log2, y=Methylation, colour=Group)) +
+  geom_point(size=3) +
+  geom_smooth(method='lm', se= F, size = 0.6, colour="Black", aes(group=1)) +
+  labs(title="", subtitle="Liver, cor=-0.194, 0.645") +
+  xlab("Gene Expression Ratio (log2)") +
+  ylab("Methylation (%)") +
+  theme_light() +
+  theme(legend.position = "none")+
+  scale_colour_manual(values = get_pal("Takahe")[c(1,2)])
+```
+
+
+```{r}
+Rik_Muscle <- Rik_data %>% filter(Tissue=="Muscle")
+Rik_Muscle$log2 <- log2(Rik_Muscle$GeneExpressionRatio)
+
+cor.test(Rik_Muscle$log2, Rik_Muscle$Methylation, method="pearson")
+p13_log2 <- ggplot(Rik_Muscle, aes(x=log2, y=Methylation, colour=Group)) +
+  geom_point(size=3) +
+  geom_smooth(method='lm', se= F, size = 0.6, colour="Black", aes(group=1)) +
+  labs(title="", subtitle="Muscle, cor=-0.278, 0.503") +
+  xlab("Gene Expression Ratio (log2)") +
+  ylab("Methylation (%)") +
+  theme_light() +
+  theme(legend.position = "none")+
+  scale_colour_manual(values = get_pal("Takahe")[c(1,2)])
+```
+
+
+```{r}
+Rik_Tail  <- Rik_data %>% filter(Tissue=="Tail")
+Rik_Tail$log2 <- log2(Rik_Tail$GeneExpressionRatio)
+
+cor.test(Rik_Tail$log2, Rik_Tail$Methylation, method="pearson")
+p14_log2 <- ggplot(Rik_Tail, aes(x=log2, y=Methylation, colour=Group)) +
+  geom_point(size=3) +
+  geom_smooth(method='lm', se= F, size = 0.6, colour="Black", aes(group=1)) +
+  labs(title="", subtitle="Tail, cor=0.034, p=0.936") +
+  xlab("Gene Expression Ratio (log2)") +
+  ylab("Methylation (%)") +
+  theme_light() +
+  theme(legend.position = "none") +
+  scale_colour_manual(values = get_pal("Takahe")[c(1,2)])
+```
+
+
+```{r}
+legend_b <- get_legend(
+  p9_log2 + guides(color = guide_legend(nrow = 1)) +
+    theme(legend.position = "bottom"))
+
+cp1_log2 <- cowplot::plot_grid(p9_log2, p11_log2, p12_log2, p13_log2, p14_log2, p2_log2, p4_log2, p5_log2, p6_log2, p7_log2, nrow=2)
+
+cp2_log2 <- cowplot::plot_grid(cp1_log2, legend_b, nrow=2, rel_heights = c(1, 0.05))
+cp2_log2
+ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/correlation_methylation_expression_3_log2.png",cp2_log2,width=16,height=8)
+
+```
+

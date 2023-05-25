@@ -1,0 +1,165 @@
+---
+title: "Sheep Empirical Sampling, 75% Methylated"
+date: 'Last updated: May 15 2023'
+output:
+  word_document: default
+  pdf_document: default
+---
+
+This Markdown notebook describes the process of empirically sampling an amplicon to determine the margin of error associated with a particular number of CG calls (reads) per sample. Using a for loop, this script takes random samplings of a real amplicon sample in read sizes between 1 and n, calls the methylation of that sample based on the randomly sampled data, and plots it. From this, we are able to infer an suitable number of CG calls to aim for (i.e. threshold) while allowing an appropriate amount of error.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load required packages
+```{r}
+library(dplyr)
+library(ggplot2)
+library(cowplot)
+library(reshape2)
+library(Manu)
+```
+
+# And now a 75% methylated sample to show in the thesis
+## plotting a 75% methylated site for the thesis
+```{r}
+data_sheep <- read.delim("/Users/victoriasugrue/Dropbox (Otago University)/75meth_sampling/CpG_context_Wether_Ear_G3_2014_AllSequencingConcatenatedFeb2023_R1_trimmed.fq_bismark.txt", skip=1)
+# Rename columns
+colnames(data_sheep) <- c("Sample", "Strand", "Locus", "Location", "MethylationCall")
+```
+
+
+# Create list for data to be dumped into
+```{r}
+sample_data_list <- numeric()
+```
+
+# Sampling loop
+```{r, message=F}
+# Create an empty data frame to store the results
+results_df <- data.frame(Sample_Size = numeric(), Methylation = numeric())
+
+# Loop through the sample sizes and replicate each 1000 times
+for (i in c(10, 50, 100, 200, 500, 1000, 2000, 3000, 4000, 5000, 
+            6000, 7000, 8000, 9000, 10000, 
+            11000, 12000, 13000, 14000, 15000, 
+            16000, 17000, 18000, 19000, 20000,
+            21000, 22000, 23000, 24000)) {
+  for (j in 1:1000) {
+    sample_data <- sample_n(data_sheep, i)  
+    methylation_table <- table(sample_data$MethylationCall)
+    methylation <- as.numeric(methylation_table["Z"] / sum(methylation_table))
+    sample_data_list <- cbind(Sample_Size = i, Methylation = methylation)
+    results_df <- rbind(results_df, sample_data_list)
+  }
+}
+```
+
+# Plot 
+```{r}
+methylation_plot <- ggplot(results_df, aes(x=Sample_Size, y=Methylation)) +
+  geom_point(size=3,alpha=1/3) +
+  theme_light() +
+  ylab("Methylation (%)") +
+  xlab("CG calls assayed")
+methylation_plot
+ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/EmpiricalSampling_Methylation.png",methylation_plot, width=10, height = 5, dpi=1000)
+```
+
+# Finding most representative methylation call of this dataset
+```{r}
+mean <- mean(results_df$Methylation[28001:29000])
+```
+
+# Making a list of the error to plot (percentage of 100%)
+```{r}
+results_df$error <- as.numeric(abs(mean-results_df$Methylation))
+
+error_plot <- ggplot(results_df, aes(x=Sample_Size, y=error)) + 
+  geom_point(size=3,alpha=1/3) +
+  theme_light() +
+  ylab("Margin of Error") +
+  xlab("CG calls assayed")
+error_plot
+ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/EmpiricalSampling_ErrorPP.png",error_plot, width=10, height = 5, dpi=1000)
+```
+
+# Find 99.5% confidence interval
+```{r}
+# Calculate the 99.5% confidence intervals
+cis <- aggregate(error ~ Sample_Size, data = results_df, function(x) quantile(x, c(0.0025, 0.9975)))
+
+# Extract the upper confidence interval values
+upper_cis <- cis$error[,2]
+
+# Create a dataframe
+df <- data.frame(Sample_Size = cis$Sample_Size,
+                 Upper_CI = upper_cis)
+```
+
+
+# Making a list of the error to plot (+/- pp)
+```{r}
+#establishing modelling parameters
+zstar = qnorm(.995) #This defines 99.5% confidence level
+p = 0.75 #The approximate methylation level from this example
+n = c(10, 50, 100, 200, 500, 1000, 2000, 3000, 4000, 5000, 
+            6000, 7000, 8000, 9000, 10000, 
+            11000, 12000, 13000, 14000, 15000, 
+            16000, 17000, 18000, 19000, 20000,
+            21000, 22000, 23000, 24000) #Numbers of cytosine calls assayed
+E = zstar*sqrt((p*(1-p))/n) #Margin of error calculation given above variables
+
+#coercing into dataframe
+Edf <- as.data.frame(E)
+ndf <- as.data.frame(n)
+Edf$n <- ndf$n
+Edf$Percent <- Edf$E*100
+
+#establishing intercepts
+line5 <- 5
+line25 <- 2.5
+line1 <- 1
+
+model_plot <- ggplot(Edf, aes(x=n, y=Percent)) +
+  geom_point(alpha=2/5) +
+  geom_hline(yintercept = line5, colour="#CC0000", linetype=2) +
+  geom_text(aes(24817,line5,label = "5%", vjust = -0.2, colour="#006600")) +
+  geom_hline(yintercept = line25, colour="#006600", linetype=2) +
+  geom_text(aes(24817,line25,label = "2.5%", vjust = -0.2, colour="#0066CC")) +
+  geom_hline(yintercept = line1, colour="#0066CC",  linetype=2) +
+  geom_text(aes(24817,line1,label = "1%", vjust = -0.2, colour="#CC0000")) +
+  labs(x="Number of Cs in CG context", y="Margin of error") +
+  theme_light() +
+  ylim(0,100) +
+  theme(legend.position="none")  
+model_plot
+ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/SamplingModel.png",model_plot, width=10, height = 5, dpi=1000)
+
+```
+
+# plot on top of each other
+
+```{r}
+Edf$Empirical <- df$Upper_CI*100
+
+colnames(Edf) <- c("E","n","Simulated","Empirical")
+
+combo_df <- melt(Edf, id=c("E", "n"))
+colnames(combo_df) <- c("E","n","Data","Error")
+
+combo_plot <- ggplot(combo_df, aes(x=n, y=Error, colour=Data)) +
+  geom_point(size=3, alpha=4/5) +
+  geom_line(alpha=2/3) +
+  theme_light() +
+  ylim(0,50) +
+  ylab("Margin of Error (±%)") +
+  xlab("CG calls assayed") +
+  scale_colour_manual(values = get_pal("Takahe")[c(2,1)], labels = c("Simulated", "Empirical"))
+combo_plot
+
+ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/SamplingPlot_overlaidNEWMay11.png",combo_plot, width=10, height = 4, dpi=1000)
+```
+
+

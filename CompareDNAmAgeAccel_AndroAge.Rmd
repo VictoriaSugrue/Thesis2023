@@ -1,0 +1,94 @@
+---
+title: "Sheep Amplicon vs Array Comparisons"
+author: "Victoria Sugrue"
+date: 'Last updated: 16 May 2023'
+output:
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_float: yes
+    toc_depth: 7
+  pdf_document:
+    toc: yes
+    toc_depth: 5
+    df_print: kable
+    latex_engine: xelatex
+subtitle: ' '
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load required packages
+```{r}
+library(ggplot2)
+library(dplyr)
+library(forcats)
+library(Manu)
+```
+
+# Load data
+```{r}
+array_data <- read.csv('/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Bioinformatics/Data/datPredictedAgeN18FinalJosephZoller.csv')
+amplicon_data <- read.csv('/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Bioinformatics/Data/sheep_data_modelled.csv')
+
+amplicon_data <- amplicon_data %>% filter(CG_Calls>=497)
+```
+
+```{r}
+# make new dataframe of the data that exists in both datasets
+compare_df <- merge(x=array_data, y=amplicon_data, by.x="ExternalSampleID", by.y="Sample")[]
+#write.csv(compare_df, "/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Bioinformatics/Data/DataBoth_Array_Amplicon.csv")
+```
+
+# Plot (Based on all)
+
+```{r}
+plotall_scat <- ggplot(compare_df, aes(x=AgeAccelbasedOnAll, y=residuals, colour=Castration_Sex)) +
+  geom_point(size=4, alpha=3/4) + 
+  scale_colour_manual(values = get_pal("Takahe")[c(1,2,4)]) +
+  geom_smooth(method="lm", se=F, colour="Black") +
+  geom_abline(linetype="dashed") +
+  theme_light() +
+  labs(colour="Sex", y="AndroAge acceleration (Years)", x="DNAmAge acceleration (Years)") 
+plotall_scat
+
+ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/CompareAccel_Ram_AgeAccelLOO.png",plotall_scat, width=8, height = 7, dpi=1000)
+```
+
+
+# Calculate correlation
+
+```{r}
+cor.test(compare_df$AgeAccelbasedOnAll, compare_df$residuals, method="pearson")
+```
+
+# Plot (LOO)
+
+
+```{r}
+plotLOO_scat <- ggplot(compare_df, aes(x=AgeAccelLOO, y=residuals, colour=Castration_Sex)) +
+  geom_point(size=4, alpha=3/4) + 
+  scale_colour_manual(values = get_pal("Takahe")[c(1,2,4)]) +
+  geom_smooth(method="lm", se=F, colour="Black") +
+  geom_abline(linetype="dashed") +
+  theme_light() +
+  labs(colour="Sex", y="AndroAge acceleration (Years)", x="DNAmAge acceleration (Years)") +
+  theme(legend.position="none")
+
+plotLOO_scat
+```
+
+# Calculate correlation
+
+```{r}
+cor.test(compare_df$AgeAccelLOO, compare_df$residuals, method="pearson")
+```
+
+
+
+
+
+

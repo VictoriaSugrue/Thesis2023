@@ -1,0 +1,194 @@
+---
+title: "AIC of linear models, mice"
+author: "Victoria Sugrue"
+date: 'Last updated: 16 May 2023'
+output:
+  word_document:
+    toc: no
+    toc_depth: '6'
+  html_document:
+    toc: no
+    toc_float: no
+    toc_depth: 6
+  pdf_document:
+    toc: no
+    toc_depth: 5
+    df_print: kable
+    latex_engine: xelatex
+subtitle: ' '
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load required packages
+```{r}
+library(AICcmodavg)
+library(dplyr)
+```
+
+# Load dataset of array methylation call of the top 20 most significant asDMPs for mice
+
+```{r}
+data_mouse <- read.csv("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Bioinformatics/Data/Mouse_ArrayData.csv")
+
+data_mouse$AndroAge6 <- "0"
+data_mouse$AndroAge6[data_mouse$Sex=="M"] <- data_mouse$Age-0.115068
+data_mouse$AndroAge8 <- "0"
+data_mouse$AndroAge8[data_mouse$Sex=="M"] <- data_mouse$Age-0.153425
+
+# Adjust to 0 where negative
+data_mouse$AndroAge6[data_mouse$AndroAge6 < 0] <- 0
+data_mouse$AndroAge8[data_mouse$AndroAge8 < 0] <- 0
+
+mouse_tail <- data_mouse %>% filter(Tissue=="Tail") %>% filter(Sex=="M")
+mouse_muscle <- data_mouse %>% filter(Tissue=="Muscle") %>% filter(Sex=="M")
+```
+
+
+# Run linear models including the top 20 most significant asDMPs, adding one each time
+# Muscle
+
+```{r}
+#1
+muscle8_mouse_lm1 <- lm(AndroAge8 ~ cg21524116, data=mouse_muscle)
+summary(muscle8_mouse_lm1)
+
+#2
+muscle8_mouse_lm2 <- lm(AndroAge8 ~ cg21524116 + cg18315252, data=mouse_muscle)
+summary(muscle8_mouse_lm2)
+
+#3
+muscle8_mouse_lm3 <- lm(AndroAge8 ~ cg21524116 + cg18315252 + cg11164048, data=mouse_muscle)
+summary(muscle8_mouse_lm3)
+
+#4
+muscle8_mouse_lm4 <- lm(AndroAge8 ~ cg21524116 + cg18315252 + cg11164048 + cg00658920, data=mouse_muscle)
+summary(muscle8_mouse_lm4)
+```
+
+# Run AIC
+
+```{r}
+muscle8_mouse_models <- list(muscle8_mouse_lm1, muscle8_mouse_lm2, muscle8_mouse_lm3, muscle8_mouse_lm4)
+muscle8_mouse_model.names <- c("muscle8_mouse_lm1", "muscle8_mouse_lm2", "muscle8_mouse_lm3", "muscle8_mouse_lm4")
+
+#library(AICcmodavg)
+AICmuscle8 <- aictab(cand.set = muscle8_mouse_models, modnames = muscle8_mouse_model.names)
+AICmuscle8
+```
+
+
+# Tail
+
+```{r}
+#1
+tail8_mouse_lm1 <- lm(AndroAge8 ~ cg21524116, data=mouse_tail)
+summary(tail8_mouse_lm1)
+
+#2
+tail8_mouse_lm2 <- lm(AndroAge8 ~ cg21524116 + cg18315252, data=mouse_tail)
+summary(tail8_mouse_lm2)
+
+#3
+tail8_mouse_lm3 <- lm(AndroAge8 ~ cg21524116 + cg18315252 + cg11164048, data=mouse_tail)
+summary(tail8_mouse_lm3)
+
+#4
+tail8_mouse_lm4 <- lm(AndroAge8 ~ cg21524116 + cg18315252 + cg11164048 + cg00658920, data=mouse_tail)
+summary(tail8_mouse_lm4)
+```
+
+# Run AIC
+
+```{r}
+tail8_mouse_models <- list(tail8_mouse_lm1, tail8_mouse_lm2, tail8_mouse_lm3, tail8_mouse_lm4)
+tail8_mouse_model.names <- c("tail8_mouse_lm1", "tail8_mouse_lm2", "tail8_mouse_lm3", "tail8_mouse_lm4")
+
+#library(AICcmodavg)
+AICtail8 <- aictab(cand.set = tail8_mouse_models, modnames = tail8_mouse_model.names)
+AICtail8
+```
+
+
+# Muscle
+
+```{r}
+#1
+muscle6_mouse_lm1 <- lm(AndroAge6 ~ cg21524116, data=mouse_muscle)
+summary(muscle6_mouse_lm1)
+
+#2
+muscle6_mouse_lm2 <- lm(AndroAge6 ~ cg21524116 + cg18315252, data=mouse_muscle)
+summary(muscle6_mouse_lm2)
+
+#3
+muscle6_mouse_lm3 <- lm(AndroAge6 ~ cg21524116 + cg18315252 + cg11164048, data=mouse_muscle)
+summary(muscle6_mouse_lm3)
+
+#4
+muscle6_mouse_lm4 <- lm(AndroAge6 ~ cg21524116 + cg18315252 + cg11164048 + cg00658920, data=mouse_muscle)
+summary(muscle6_mouse_lm4)
+```
+
+# Run AIC
+
+```{r}
+muscle6_mouse_models <- list(muscle6_mouse_lm1, muscle6_mouse_lm2, muscle6_mouse_lm3, muscle6_mouse_lm4)
+muscle6_mouse_model.names <- c("muscle6_mouse_lm1", "muscle6_mouse_lm2", "muscle6_mouse_lm3", "muscle6_mouse_lm4")
+
+#library(AICcmodavg)
+AICmuscle6 <- aictab(cand.set = muscle6_mouse_models, modnames = muscle6_mouse_model.names)
+AICmuscle6
+```
+
+
+# Tail
+
+```{r}
+#1
+tail6_mouse_lm1 <- lm(AndroAge6 ~ cg21524116, data=mouse_tail)
+summary(tail6_mouse_lm1)
+
+#2
+tail6_mouse_lm2 <- lm(AndroAge6 ~ cg21524116 + cg18315252, data=mouse_tail)
+summary(tail6_mouse_lm2)
+
+#3
+tail6_mouse_lm3 <- lm(AndroAge6 ~ cg21524116 + cg18315252 + cg11164048, data=mouse_tail)
+summary(tail6_mouse_lm3)
+
+#4
+tail6_mouse_lm4 <- lm(AndroAge6 ~ cg21524116 + cg18315252 + cg11164048 + cg00658920, data=mouse_tail)
+summary(tail6_mouse_lm4)
+```
+
+# Run AIC
+
+```{r}
+tail6_mouse_models <- list(tail6_mouse_lm1, tail6_mouse_lm2, tail6_mouse_lm3, tail6_mouse_lm4)
+tail6_mouse_model.names <- c("tail6_mouse_lm1", "tail6_mouse_lm2", "tail6_mouse_lm3", "tail6_mouse_lm4")
+
+#library(AICcmodavg)
+AICtail6 <- aictab(cand.set = tail6_mouse_models, modnames = tail6_mouse_model.names)
+AICtail6
+```
+
+# Compare!
+
+```{r}
+AICmuscle6
+```
+
+```{r}
+AICtail6
+```
+
+```{r}
+AICmuscle8
+```
+
+```{r}
+AICtail8
+```
+

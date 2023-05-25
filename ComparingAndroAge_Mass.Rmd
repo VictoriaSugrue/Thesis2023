@@ -1,0 +1,76 @@
+---
+title: "AndrogenAge vs Mass"
+author: "Victoria Sugrue"
+date: 'Last updated: 18 MAy 2023'
+output:
+  word_document:
+    toc: no
+    toc_depth: '0'
+  html_document:
+    toc: no
+    toc_float: no
+    toc_depth: 0
+  pdf_document:
+    toc: no
+    toc_depth: 0
+    df_print: kable
+    latex_engine: xelatex
+subtitle: ' '
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load required packages
+```{r}
+library(ggplot2)
+library(dplyr)
+library(ggpubr)
+library(cowplot)
+```
+
+# Data preparation
+```{r}
+# Load data
+compare_df <- read.csv('/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Bioinformatics/Data/DataBoth_Array_Amplicon.csv')
+
+```
+
+# Plot lamb mass vs AndroAge prediction
+
+```{r}
+p1 <- ggplot(compare_df, aes(x=fitted, y=Mass)) +
+  geom_point(size=5, alpha=2/3) +
+  geom_smooth(method="lm") +
+  stat_cor(method = "pearson", label.x = 0) +
+  theme_light() +
+  ylab("Mass (Kilograms)") + 
+  xlab("Amplicon AndroAge") +
+  xlim(-0.5,1.25) 
+p1
+
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/compareAndroAge_LambMass.png",p3,width=8,height=8)
+```
+
+```{r}
+p2 <- ggplot(compare_df, aes(x=residuals, y=Mass)) +
+  geom_point(size=5, alpha=2/3) +
+  geom_smooth(method="lm") +
+  stat_cor(method = "pearson", label.x = 0) +
+  theme_light() +
+  ylab("Mass (Kilograms)") + 
+  xlab("Amplicon AndroAge Acceleration") +
+  xlim(-0.5,0.5) 
+p2
+
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/compareAndroAgeAccel_LambMass.png",p3,width=8,height=8)
+```
+
+```{r}
+combined_p <- cowplot::plot_grid(p1, p2, labels=c("A", "B"), nrow=1)
+combined_p
+
+ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/cowplot_compareAndroAgeAccel_AndAccel_LambMass.png",combined_p,width=12,height=6)
+
+```
+

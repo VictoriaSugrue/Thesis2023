@@ -1,0 +1,1532 @@
+---
+title: "Sampling, mice"
+date: 'Last updated: Feb 18 2023'
+output:
+  word_document: default
+  pdf_document: default
+---
+
+This Markdown notebook describes the process of empirically sampling an amplicon to determine the margin of error associated with a particular number of CG calls (reads) per sample. Using a for loop, this script takes random samplings of a real amplicon sample in read sizes between 1 and 20,000, calls the methylation of that sample based on the randomly sampled data, and plots it. From this, we are able to infer an suitable number of CG calls to aim for (i.e. threshold) while allowing an appropriate amount of error.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load required packages
+```{r}
+library(dplyr)
+library(ggplot2)
+library(cowplot)
+library(reshape2)
+library(Manu)
+```
+
+# Mice
+## Extra low methylation 
+### 1 DPPA17_Muscle
+
+## Low methylation
+### 2 Plate1_AdultFemale_Tail_Tube34
+### 3 Plate2_AdultMale_Muscle_Tube1
+### 4 Plate1_AdultFemale_Tail_Tube71
+
+## Average methylation
+### 5 DPPA12_Tail
+### 6 Plate1_AdultMale_Muscle_Tube7
+### 7 Plate1_AdultMale_Liver_Tube49
+
+## High methylation
+### 8 Plate1_AdultMale_Tail_Tube89
+### 9 DPPA1_Liver
+### 10 Plate2_AdultMale_Tail_Tube61
+### 11 DPPA11_Liver
+
+# Data preparation
+```{r, echo=FALSE}
+data_low_1_mouse <- read.delim("/Users/victoriasugrue/Dropbox (Otago University)/MKLN1_AmpSampling/CpG_context_iSeq038-VS-DHT-17-Muscle_S373_L001_R1_001_trimmed.fq_bismark.txt", skip=1)
+# Rename columns
+colnames(data_low_1_mouse) <- c("Sample", "Strand", "Locus", "Location", "MethylationCall")
+#data_low_1_mouse$MethylationCall[1:100] # prints on the first 100
+
+data_low_2_mouse <- read.delim("/Users/victoriasugrue/Dropbox (Otago University)/MKLN1_AmpSampling/CpG_context_Plate1_AdultFemale_Tail_Tube34_AllSequencingConcatenated_R1_trimmed.fq_bismark.txt", skip=1)
+# Rename columns
+colnames(data_low_2_mouse) <- c("Sample", "Strand", "Locus", "Location", "MethylationCall")
+#data_low_2_mouse$MethylationCall[1:100] # prints on the first 100
+
+data_low_3_mouse <- read.delim("/Users/victoriasugrue/Dropbox (Otago University)/MKLN1_AmpSampling/CpG_context_Plate2_AdultMale_Muscle_Tube1_AllSequencingConcatenated_R1_trimmed.fq_bismark.txt", skip=1)
+# Rename columns
+colnames(data_low_3_mouse) <- c("Sample", "Strand", "Locus", "Location", "MethylationCall")
+#data_low_3_mouse$MethylationCall[1:100] # prints on the first 100
+
+data_low_4_mouse <- read.delim("/Users/victoriasugrue/Dropbox (Otago University)/MKLN1_AmpSampling/CpG_context_Plate1_AdultFemale_Tail_Tube71_AllSequencingConcatenated_R1_trimmed.fq_bismark.txt", skip=1)
+# Rename columns
+colnames(data_low_4_mouse) <- c("Sample", "Strand", "Locus", "Location", "MethylationCall")
+#data_low_4_mouse$MethylationCall[1:100] # prints on the first 100
+
+data_mid_5_mouse <- read.delim("/Users/victoriasugrue/Dropbox (Otago University)/MKLN1_AmpSampling/CpG_context_iSeq038-VS-DHT-12-Tail_S347_L001_R1_001_trimmed.fq_bismark.txt", skip=1)
+# Rename columns
+colnames(data_mid_5_mouse) <- c("Sample", "Strand", "Locus", "Location", "MethylationCall")
+#data_mid_5_mouse$MethylationCall[1:100] # prints on the first 100
+
+data_mid_6_mouse <- read.delim("/Users/victoriasugrue/Dropbox (Otago University)/MKLN1_AmpSampling/CpG_context_Plate1_AdultMale_Muscle_Tube7_AllSequencingConcatenated_R1_trimmed.fq_bismark.txt", skip=1)
+# Rename columns
+colnames(data_mid_6_mouse) <- c("Sample", "Strand", "Locus", "Location", "MethylationCall")
+#data_mid_6_mouse$MethylationCall[1:100] # prints on the first 100
+
+data_mid_7_mouse <- read.delim("/Users/victoriasugrue/Dropbox (Otago University)/MKLN1_AmpSampling/CpG_context_Plate1_AdultMale_Liver_Tube49_AllSequencingConcatenated_R1_trimmed.fq_bismark.txt", skip=1)
+# Rename columns
+colnames(data_mid_7_mouse) <- c("Sample", "Strand", "Locus", "Location", "MethylationCall")
+#data_mid_7_mouse$MethylationCall[1:100] # prints on the first 100
+
+data_high_8_mouse <- read.delim("/Users/victoriasugrue/Dropbox (Otago University)/MKLN1_AmpSampling/CpG_context_Plate1_AdultMale_Tail_Tube89_AllSequencingConcatenated_R1_trimmed.fq_bismark.txt", skip=1)
+# Rename columns
+colnames(data_high_8_mouse) <- c("Sample", "Strand", "Locus", "Location", "MethylationCall")
+#data_high_8_mouse$MethylationCall[1:100] # prints on the first 100
+
+data_high_9_mouse <- read.delim("/Users/victoriasugrue/Dropbox (Otago University)/MKLN1_AmpSampling/CpG_context_iSeq038-VS-DHT-1-Liver_S304_L001_R1_001_trimmed.fq_bismark.txt", skip=1)
+# Rename columns
+colnames(data_high_9_mouse) <- c("Sample", "Strand", "Locus", "Location", "MethylationCall")
+#data_high_9_mouse$MethylationCall[1:100] # prints on the first 100
+
+data_high_10_mouse <- read.delim("/Users/victoriasugrue/Dropbox (Otago University)/MKLN1_AmpSampling/CpG_context_Plate2_AdultMale_Tail_Tube61_AllSequencingConcatenated_R1_trimmed.fq_bismark.txt", skip=1)
+# Rename columns
+colnames(data_high_10_mouse) <- c("Sample", "Strand", "Locus", "Location", "MethylationCall")
+#data_high_1_mouse0$MethylationCall[1:100] # prints on the first 100
+
+data_high_11_mouse <- read.delim("/Users/victoriasugrue/Dropbox (Otago University)/MKLN1_AmpSampling/CpG_context_iSeq038-VS-DHT-11-Liver_S344_L001_R1_001_trimmed.fq_bismark.txt", skip=1)
+# Rename columns
+colnames(data_high_11_mouse) <- c("Sample", "Strand", "Locus", "Location", "MethylationCall")
+#data_high_1_mouse1$MethylationCall[1:100] # prints on the first 100
+```
+
+
+
+# Low 1 
+
+# Create list for data to be dumped into
+```{r}
+sample_data_list_1_mouse <- c()
+```
+
+# Sampling loop - creates random samples of sizes between 1 and n
+```{r, message=F}
+# Create an empty data frame to store the results
+results_df_1_mouse <- data.frame(Sample_Size = numeric(), Methylation = numeric())
+
+for (i in c(10, 50, 100, 200, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000, 6500, 7000, 7500, 8000)) {
+  for (j in 1:1000) {
+    sample_data_1_mouse <- sample_n(data_low_1_mouse, i)  
+    methylation_table <- table(sample_data_1_mouse$MethylationCall)
+    methylation <- as.numeric(methylation_table["Z"] / sum(methylation_table))
+    sample_data_list_1_mouse <- cbind(Sample_Size = i, Methylation = methylation)
+    results_df_1_mouse <- rbind(results_df_1_mouse, sample_data_list_1_mouse)
+  }
+}
+```
+
+
+# Plot
+```{r}
+methylation_plot_1_mouse <- ggplot(results_df_1_mouse, aes(x=Sample_Size, y=Methylation)) +
+  geom_point(size=3,alpha=1/3) +
+  theme_light() +
+  ylab("Methylation (%)") +
+  xlab("CG calls assayed")
+methylation_plot_1_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/EmpiricalSampling_Methylation_1_mouseMOUSE.png",methylation_plot_1_mouse, width=10, height = 5, dpi=1000)
+```
+
+
+# Finding most representative methylation call of this dataset
+```{r}
+mean_1_mouse <- mean(results_df_1_mouse$Methylation[19001:20000])
+```
+
+# Making a list of the error to plot (percentage of 100%)
+
+```{r}
+results_df_1_mouse$error <- as.numeric(abs(mean_1_mouse-results_df_1_mouse$Methylation))
+
+error_plot_1_mouse <- ggplot(results_df_1_mouse, aes(x=Sample_Size, y=error)) + 
+  geom_point(size=3,alpha=1/3) +
+  theme_light() +
+  ylab("Margin of Error") +
+  xlab("CG calls assayed")
+error_plot_1_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/EmpiricalSampling_Error_1_mouseMOUSE.png",error_plot_1_mouse, width=10, height = 5, dpi=1000)
+```
+
+# Find 99.5% confidence interval
+```{r}
+cis_1_mouse <- aggregate(error ~ Sample_Size, data = results_df_1_mouse, function(x) quantile(x, c(0.0025, 0.9975)))
+upper_cis_1_mouse <- cis_1_mouse$error[,2]
+
+df_1_mouse <- data.frame(Sample_Size = cis_1_mouse$Sample_Size,
+                 Upper_CI = upper_cis_1_mouse)
+```
+
+# Making a list of the error to plot (+/- pp)
+```{r}
+#establishing modelling parameters
+zstar = qnorm(.995) #This defines 99.5% confidence level
+p = mean_1_mouse #The approximate methylation level from this example
+n = c(10, 50, 100, 200, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000, 6500, 7000, 7500, 8000) #Numbers of cytosine calls assayed
+E = zstar*sqrt((p*(1-p))/n) #Margin of error calculation given above variables
+
+#coercing into dataframe
+Edf_1_mouse <- as.data.frame(E)
+ndf_1_mouse <- as.data.frame(n)
+Edf_1_mouse$n <- ndf_1_mouse$n
+Edf_1_mouse$Percent <- Edf_1_mouse$E*100
+
+#establishing intercepts
+line5 <- 5
+line25 <- 2.5
+line1 <- 1
+
+model_plot_1_mouse <- ggplot(Edf_1_mouse, aes(x=n, y=Percent)) +
+  geom_point(alpha=2/5) +
+  geom_hline(yintercept = line5, colour="#CC0000", linetype=2) +
+  geom_text(aes(737,line5,label = "5%", vjust = -0.2, colour="#006600")) +
+  geom_hline(yintercept = line25, colour="#006600", linetype=2) +
+  geom_text(aes(737,line25,label = "2.5%", vjust = -0.2, colour="#0066CC")) +
+  geom_hline(yintercept = line1, colour="#0066CC",  linetype=2) +
+  geom_text(aes(737,line1,label = "1%", vjust = -0.2, colour="#CC0000")) +
+  labs(x="Number of Cs in CG context", y="Margin of error") +
+  theme_light() +
+  ylim(0,100) +
+  theme(legend.position="none")  
+model_plot_1_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/SamplingModel_1_mouseMOUSE.png",model_plot_1_mouse, width=10, height = 5, dpi=1000)
+
+```
+
+
+# plot on top of each other
+
+```{r}
+Edf_1_mouse$Empirical <- df_1_mouse$Upper_CI*100
+
+colnames(Edf_1_mouse) <- c("E","n","Simulated","Empirical")
+
+combo_df_1_mouse <- melt(Edf_1_mouse, id=c("E", "n"))
+colnames(combo_df_1_mouse) <- c("E","n","Data","Error")
+
+combo_plot_1_mouse <- ggplot(combo_df_1_mouse, aes(x=n, y=Error, colour=Data)) +
+  geom_point(size=3, alpha=4/5) +
+  geom_line(alpha=2/3) +
+  theme_light() +
+  ylim(0,50) +
+  ggtitle("26.36% Methylated") +
+  ylab("Margin of Error (±%)") +
+  xlab("CG calls assayed") +
+  scale_colour_manual(values = get_pal("Takahe")[c(2,1)], labels = c("Empirical", "Simulated"))
+combo_plot_1_mouse
+
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/SamplingPlot_overlaidNEW_1_mouseMOUSE.png",combo_plot_1_mouse, width=10, height = 4, dpi=1000)
+```
+
+
+# Low 2
+
+# Create list for data to be dumped into
+```{r}
+sample_data_list_2_mouse <- c()
+```
+
+# Sampling loop - creates random samples of sizes between 1 and n
+```{r, message=F}
+# Create an empty data frame to store the results
+results_df_2_mouse <- data.frame(Sample_Size = numeric(), Methylation = numeric())
+
+for (i in c(10, 50, 100, 200, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000)) {
+  for (j in 1:1000) {
+    sample_data_2_mouse <- sample_n(data_low_2_mouse, i)  
+    methylation_table <- table(sample_data_2_mouse$MethylationCall)
+    methylation <- as.numeric(methylation_table["Z"] / sum(methylation_table))
+    sample_data_list_2_mouse <- cbind(Sample_Size = i, Methylation = methylation)
+    results_df_2_mouse <- rbind(results_df_2_mouse, sample_data_list_2_mouse)
+  }
+}
+```
+
+
+# Plot
+```{r}
+methylation_plot_2_mouse <- ggplot(results_df_2_mouse, aes(x=Sample_Size, y=Methylation)) +
+  geom_point(size=3,alpha=1/3) +
+  theme_light() +
+  ylab("Methylation (%)") +
+  xlab("CG calls assayed")
+methylation_plot_2_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/EmpiricalSampling_Methylation_2_mouseMOUSE.png",methylation_plot_2_mouse, width=10, height = 5, dpi=1000)
+```
+
+
+# Finding most representative methylation call of this dataset
+```{r}
+mean_2_mouse <- mean(results_df_2_mouse$Methylation[15001:16000])
+```
+
+# Making a list of the error to plot (percentage of 100%)
+
+```{r}
+results_df_2_mouse$error <- as.numeric(abs(mean_2_mouse-results_df_2_mouse$Methylation))
+
+error_plot_2_mouse <- ggplot(results_df_2_mouse, aes(x=Sample_Size, y=error)) + 
+  geom_point(size=3,alpha=1/3) +
+  theme_light() +
+  ylab("Margin of Error") +
+  xlab("CG calls assayed")
+error_plot_2_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/EmpiricalSampling_Error_2_mouseMOUSE.png",error_plot_2_mouse, width=10, height = 5, dpi=1000)
+```
+
+# Find 99.5% confidence interval
+```{r}
+cis_2_mouse <- aggregate(error ~ Sample_Size, data = results_df_2_mouse, function(x) quantile(x, c(0.0025, 0.9975)))
+upper_cis_2_mouse <- cis_2_mouse$error[,2]
+
+df_2_mouse <- data.frame(Sample_Size = cis_2_mouse$Sample_Size,
+                 Upper_CI = upper_cis_2_mouse)
+```
+
+
+# Making a list of the error to plot (+/- pp)
+```{r}
+#establishing modelling parameters
+zstar = qnorm(.995) #This defines 99.5% confidence level
+p = mean_2_mouse #The approximate methylation level from this example
+n = c(10, 50, 100, 200, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000) #Numbers of cytosine calls assayed
+E = zstar*sqrt((p*(1-p))/n) #Margin of error calculation given above variables
+
+#coercing into dataframe
+Edf_2_mouse <- as.data.frame(E)
+ndf_2_mouse <- as.data.frame(n)
+Edf_2_mouse$n <- ndf_2_mouse$n
+Edf_2_mouse$Percent <- Edf_2_mouse$E*100
+
+#establishing intercepts
+line5 <- 5
+line25 <- 2.5
+line1 <- 1
+
+model_plot_2_mouse <- ggplot(Edf_2_mouse, aes(x=n, y=Percent)) +
+  geom_point(alpha=2/5) +
+  geom_hline(yintercept = line5, colour="#CC0000", linetype=2) +
+  geom_text(aes(737,line5,label = "5%", vjust = -0.2, colour="#006600")) +
+  geom_hline(yintercept = line25, colour="#006600", linetype=2) +
+  geom_text(aes(737,line25,label = "2.5%", vjust = -0.2, colour="#0066CC")) +
+  geom_hline(yintercept = line1, colour="#0066CC",  linetype=2) +
+  geom_text(aes(737,line1,label = "1%", vjust = -0.2, colour="#CC0000")) +
+  labs(x="Number of Cs in CG context", y="Margin of error") +
+  theme_light() +
+  ylim(0,100) +
+  theme(legend.position="none")  
+model_plot_2_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/SamplingModel_2_mouseMOUSE.png",model_plot_2_mouse, width=10, height = 5, dpi=1000)
+
+```
+
+
+# plot on top of each other
+
+```{r}
+
+Edf_2_mouse$Empirical <- df_2_mouse$Upper_CI*100
+
+colnames(Edf_2_mouse) <- c("E","n","Simulated","Empirical")
+
+combo_df_2_mouse <- melt(Edf_2_mouse, id=c("E", "n"))
+colnames(combo_df_2_mouse) <- c("E","n","Data","Error")
+
+
+combo_plot_2_mouse <- ggplot(combo_df_2_mouse, aes(x=n, y=Error, colour=Data)) +
+  geom_point(size=3, alpha=4/5) +
+  geom_line(alpha=2/3) +
+  theme_light() +
+  ggtitle("47.40% Methylated") +
+  ylim(0,50) +
+  ylab("Margin of Error (±%)") +
+  xlab("CG calls assayed") +
+  scale_colour_manual(values = get_pal("Takahe")[c(2,1)], labels = c("Empirical", "Simulated"))
+combo_plot_2_mouse
+
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/SamplingPlot_overlaidNEW_2_mouseMOUSE.png",combo_plot_2_mouse, width=10, height = 4, dpi=1000)
+```
+
+# Low 3
+
+# Create list for data to be dumped into
+```{r}
+sample_data_list_3_mouse <- c()
+```
+
+# Sampling loop - creates random samples of sizes between 1 and n
+```{r, message=F}
+# Create an empty data frame to store the results
+results_df_3_mouse <- data.frame(Sample_Size = numeric(), Methylation = numeric())
+
+for (i in c(10, 50, 100, 200, 500, 1000, 1500, 2000)) {
+  for (j in 1:1000) {
+    sample_data_3_mouse <- sample_n(data_low_3_mouse, i)  
+    methylation_table <- table(sample_data_3_mouse$MethylationCall)
+    methylation <- as.numeric(methylation_table["Z"] / sum(methylation_table))
+    sample_data_list_3_mouse <- cbind(Sample_Size = i, Methylation = methylation)
+    results_df_3_mouse <- rbind(results_df_3_mouse, sample_data_list_3_mouse)
+  }
+}
+```
+
+
+# Plot
+```{r}
+methylation_plot_3_mouse <- ggplot(results_df_3_mouse, aes(x=Sample_Size, y=Methylation)) +
+  geom_point(size=3,alpha=1/3) +
+  theme_light() +
+  ylab("Methylation (%)") +
+  xlab("CG calls assayed")
+methylation_plot_3_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/EmpiricalSampling_Methylation_3_mouseMOUSE.png",methylation_plot_3_mouse, width=10, height = 5, dpi=1000)
+```
+
+
+# Finding most representative methylation call of this dataset
+```{r}
+mean_3_mouse <- mean(results_df_3_mouse$Methylation[7001:8000])
+```
+
+# Making a list of the error to plot (percentage of 100%)
+
+```{r}
+results_df_3_mouse$error <- as.numeric(abs(mean_3_mouse-results_df_3_mouse$Methylation))
+
+error_plot_3_mouse <- ggplot(results_df_3_mouse, aes(x=Sample_Size, y=error)) + 
+  geom_point(size=3,alpha=1/3) +
+  theme_light() +
+  ylab("Margin of Error") +
+  xlab("CG calls assayed")
+error_plot_3_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/EmpiricalSampling_Error_3_mouseMOUSE.png",error_plot_3_mouse, width=10, height = 5, dpi=1000)
+```
+
+# Find 99.5% confidence interval
+```{r}
+cis_3_mouse <- aggregate(error ~ Sample_Size, data = results_df_3_mouse, function(x) quantile(x, c(0.0025, 0.9975)))
+upper_cis_3_mouse <- cis_3_mouse$error[,2]
+
+df_3_mouse <- data.frame(Sample_Size = cis_3_mouse$Sample_Size,
+                 Upper_CI = upper_cis_3_mouse)
+```
+
+# Making a list of the error to plot (+/- pp)
+```{r}
+#establishing modelling parameters
+zstar = qnorm(.995) #This defines 99.5% confidence level
+p = mean_3_mouse #The approximate methylation level from this example
+n =c(10, 50, 100, 200, 500, 1000, 1500, 2000) #Numbers of cytosine calls assayed
+E = zstar*sqrt((p*(1-p))/n) #Margin of error calculation given above variables
+
+#coercing into dataframe
+Edf_3_mouse <- as.data.frame(E)
+ndf_3_mouse <- as.data.frame(n)
+Edf_3_mouse$n <- ndf_3_mouse$n
+Edf_3_mouse$Percent <- Edf_3_mouse$E*100
+
+#establishing intercepts
+line5 <- 5
+line25 <- 2.5
+line1 <- 1
+
+model_plot_3_mouse <- ggplot(Edf_3_mouse, aes(x=n, y=Percent)) +
+  geom_point(alpha=2/5) +
+  geom_hline(yintercept = line5, colour="#CC0000", linetype=2) +
+  geom_text(aes(737,line5,label = "5%", vjust = -0.2, colour="#006600")) +
+  geom_hline(yintercept = line25, colour="#006600", linetype=2) +
+  geom_text(aes(737,line25,label = "2.5%", vjust = -0.2, colour="#0066CC")) +
+  geom_hline(yintercept = line1, colour="#0066CC",  linetype=2) +
+  geom_text(aes(737,line1,label = "1%", vjust = -0.2, colour="#CC0000")) +
+  labs(x="Number of Cs in CG context", y="Margin of error") +
+  theme_light() +
+  ylim(0,100) +
+  theme(legend.position="none")  
+model_plot_3_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/SamplingModel_3_mouseMOUSE.png",model_plot_3_mouse, width=10, height = 5, dpi=1000)
+
+```
+
+
+# plot on top of each other
+
+```{r}
+Edf_3_mouse$Empirical <- df_3_mouse$Upper_CI*100
+
+colnames(Edf_3_mouse) <- c("E","n","Simulated","Empirical")
+
+combo_df_3_mouse <- melt(Edf_3_mouse, id=c("E", "n"))
+colnames(combo_df_3_mouse) <- c("E","n","Data","Error")
+
+
+combo_plot_3_mouse <- ggplot(combo_df_3_mouse, aes(x=n, y=Error, colour=Data)) +
+  geom_point(size=3, alpha=4/5) +
+  geom_line(alpha=2/3) +
+  theme_light() +
+  ggtitle("48.24% Methylated") +
+  ylim(0,50) +
+  ylab("Margin of Error (±%)") +
+  xlab("CG calls assayed") +
+  scale_colour_manual(values = get_pal("Takahe")[c(2,1)], labels = c("Empirical", "Simulated"))
+combo_plot_3_mouse
+
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/SamplingPlot_overlaidNEW_3_mouseMOUSE.png",combo_plot_3_mouse, width=10, height = 4, dpi=1000)
+```
+
+# Low 4
+
+# Create list for data to be dumped into
+```{r}
+sample_data_list_4_mouse <- c()
+```
+
+# Sampling loop - creates random samples of sizes between 1 and n
+```{r, message=F}
+# Create an empty data frame to store the results
+results_df_4_mouse <- data.frame(Sample_Size = numeric(), Methylation = numeric())
+
+for (i in c(10, 50, 100, 200, 500, 1000, 1500, 2000, 2500, 3000, 3500)) {
+  for (j in 1:1000) {
+    sample_data_4_mouse <- sample_n(data_low_4_mouse, i)  
+    methylation_table <- table(sample_data_4_mouse$MethylationCall)
+    methylation <- as.numeric(methylation_table["Z"] / sum(methylation_table))
+    sample_data_list_4_mouse <- cbind(Sample_Size = i, Methylation = methylation)
+    results_df_4_mouse <- rbind(results_df_4_mouse, sample_data_list_4_mouse)
+  }
+}
+```
+
+
+# Plot
+```{r}
+methylation_plot_4_mouse <- ggplot(results_df_4_mouse, aes(x=Sample_Size, y=Methylation)) +
+  geom_point(size=3,alpha=1/3) +
+  theme_light() +
+  ylab("Methylation (%)") +
+  xlab("CG calls assayed")
+methylation_plot_4_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/EmpiricalSampling_Methylation_4_mouseMOUSE.png",methylation_plot_4_mouse, width=10, height = 5, dpi=1000)
+```
+
+
+# Finding most representative methylation call of this dataset
+```{r}
+mean_4_mouse <- mean(results_df_4_mouse$Methylation[10001:11000])
+```
+
+# Making a list of the error to plot (percentage of 100%)
+
+```{r}
+results_df_4_mouse$error <- as.numeric(abs(mean_4_mouse-results_df_4_mouse$Methylation))
+
+error_plot_4_mouse <- ggplot(results_df_4_mouse, aes(x=Sample_Size, y=error)) + 
+  geom_point(size=3,alpha=1/3) +
+  theme_light() +
+  ylab("Margin of Error") +
+  xlab("CG calls assayed")
+error_plot_4_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/EmpiricalSampling_Error_4_mouseMOUSE.png",error_plot_4_mouse, width=10, height = 5, dpi=1000)
+```
+
+# Find 99.5% confidence interval
+```{r}
+cis_4_mouse <- aggregate(error ~ Sample_Size, data = results_df_4_mouse, function(x) quantile(x, c(0.0025, 0.9975)))
+upper_cis_4_mouse <- cis_4_mouse$error[,2]
+
+df_4_mouse <- data.frame(Sample_Size = cis_4_mouse$Sample_Size,
+                 Upper_CI = upper_cis_4_mouse)
+```
+
+
+# Making a list of the error to plot (+/- pp)
+```{r}
+#establishing modelling parameters
+zstar = qnorm(.995) #This defines 99.5% confidence level
+p = mean_4_mouse #The approximate methylation level from this example
+n = c(10, 50, 100, 200, 500, 1000, 1500, 2000, 2500, 3000, 3500) #Numbers of cytosine calls assayed
+E = zstar*sqrt((p*(1-p))/n) #Margin of error calculation given above variables
+
+#coercing into dataframe
+Edf_4_mouse <- as.data.frame(E)
+ndf_4_mouse <- as.data.frame(n)
+Edf_4_mouse$n <- ndf_4_mouse$n
+Edf_4_mouse$Percent <- Edf_4_mouse$E*100
+
+#establishing intercepts
+line5 <- 5
+line25 <- 2.5
+line1 <- 1
+
+model_plot_4_mouse <- ggplot(Edf_4_mouse, aes(x=n, y=Percent)) +
+  geom_point(alpha=2/5) +
+  geom_hline(yintercept = line5, colour="#CC0000", linetype=2) +
+  geom_text(aes(737,line5,label = "5%", vjust = -0.2, colour="#006600")) +
+  geom_hline(yintercept = line25, colour="#006600", linetype=2) +
+  geom_text(aes(737,line25,label = "2.5%", vjust = -0.2, colour="#0066CC")) +
+  geom_hline(yintercept = line1, colour="#0066CC",  linetype=2) +
+  geom_text(aes(737,line1,label = "1%", vjust = -0.2, colour="#CC0000")) +
+  labs(x="Number of Cs in CG context", y="Margin of error") +
+  theme_light() +
+  ylim(0,100) +
+  theme(legend.position="none")  
+model_plot_4_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/SamplingModel_4_mouseMOUSE.png",model_plot_4_mouse, width=10, height = 5, dpi=1000)
+
+```
+
+
+# plot on top of each other
+
+```{r}
+Edf_4_mouse$Empirical <- df_4_mouse$Upper_CI*100
+
+colnames(Edf_4_mouse) <- c("E","n","Simulated","Empirical")
+
+combo_df_4_mouse <- melt(Edf_4_mouse, id=c("E", "n"))
+colnames(combo_df_4_mouse) <- c("E","n","Data","Error")
+
+
+combo_plot_4_mouse <- ggplot(combo_df_4_mouse, aes(x=n, y=Error, colour=Data)) +
+  geom_point(size=3, alpha=4/5) +
+  geom_line(alpha=2/3) +
+  theme_light() +
+  ylim(0,50) +
+  ggtitle("50.02% Methylated") +
+  ylab("Margin of Error (±%)") +
+  xlab("CG calls assayed") +
+  scale_colour_manual(values = get_pal("Takahe")[c(2,1)], labels = c("Empirical", "Simulated"))
+combo_plot_4_mouse
+
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/SamplingPlot_overlaidNEW_4_mouseMOUSE.png",combo_plot_4_mouse, width=10, height = 4, dpi=1000)
+```
+
+# Mid 5
+
+# Create list for data to be dumped into
+```{r}
+sample_data_list_5_mouse <- c()
+```
+
+# Sampling loop - creates random samples of sizes between 1 and n
+```{r, message=F}
+# Create an empty data frame to store the results
+results_df_5_mouse <- data.frame(Sample_Size = numeric(), Methylation = numeric())
+
+for (i in c(10, 50, 100, 200, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500)) {
+  for (j in 1:1000) {
+    sample_data_5_mouse <- sample_n(data_mid_5_mouse, i)  
+    methylation_table <- table(sample_data_5_mouse$MethylationCall)
+    methylation <- as.numeric(methylation_table["Z"] / sum(methylation_table))
+    sample_data_list_5_mouse <- cbind(Sample_Size = i, Methylation = methylation)
+    results_df_5_mouse <- rbind(results_df_5_mouse, sample_data_list_5_mouse)
+  }
+}
+```
+
+
+# Plot
+```{r}
+methylation_plot_5_mouse <- ggplot(results_df_5_mouse, aes(x=Sample_Size, y=Methylation)) +
+  geom_point(size=3,alpha=1/3) +
+  theme_light() +
+  ylab("Methylation (%)") +
+  xlab("CG calls assayed")
+methylation_plot_5_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/EmpiricalSampling_Methylation_5_mouseMOUSE.png",methylation_plot_5_mouse, width=10, height = 5, dpi=1000)
+```
+
+
+# Finding most representative methylation call of this dataset
+```{r}
+mean_5_mouse <- mean(results_df_5_mouse$Methylation[12001:13000])
+```
+
+# Making a list of the error to plot (percentage of 100%)
+
+```{r}
+results_df_5_mouse$error <- as.numeric(abs(mean_5_mouse-results_df_5_mouse$Methylation))
+
+error_plot_5_mouse <- ggplot(results_df_5_mouse, aes(x=Sample_Size, y=error)) + 
+  geom_point(size=3,alpha=1/3) +
+  theme_light() +
+  ylab("Margin of Error") +
+  xlab("CG calls assayed")
+error_plot_5_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/EmpiricalSampling_Error_5_mouseMOUSE.png",error_plot_5_mouse, width=10, height = 5, dpi=1000)
+```
+
+# Find 99.5% confidence interval
+```{r}
+cis_5_mouse <- aggregate(error ~ Sample_Size, data = results_df_5_mouse, function(x) quantile(x, c(0.0025, 0.9975)))
+upper_cis_5_mouse <- cis_5_mouse$error[,2]
+
+df_5_mouse <- data.frame(Sample_Size = cis_5_mouse$Sample_Size,
+                 Upper_CI = upper_cis_5_mouse)
+```
+
+
+# Making a list of the error to plot (+/- pp)
+```{r}
+#establishing modelling parameters
+zstar = qnorm(.995) #This defines 99.5% confidence level
+p = mean_5_mouse #The approximate methylation level from this example
+n = c(10, 50, 100, 200, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500) #Numbers of cytosine calls assayed
+E = zstar*sqrt((p*(1-p))/n) #Margin of error calculation given above variables
+
+#coercing into dataframe
+Edf_5_mouse <- as.data.frame(E)
+ndf_5_mouse <- as.data.frame(n)
+Edf_5_mouse$n <- ndf_5_mouse$n
+Edf_5_mouse$Percent <- Edf_5_mouse$E*100
+
+#establishing intercepts
+line5 <- 5
+line25 <- 2.5
+line1 <- 1
+
+model_plot_5_mouse <- ggplot(Edf_5_mouse, aes(x=n, y=Percent)) +
+  geom_point(alpha=2/5) +
+  geom_hline(yintercept = line5, colour="#CC0000", linetype=2) +
+  geom_text(aes(737,line5,label = "5%", vjust = -0.2, colour="#006600")) +
+  geom_hline(yintercept = line25, colour="#006600", linetype=2) +
+  geom_text(aes(737,line25,label = "2.5%", vjust = -0.2, colour="#0066CC")) +
+  geom_hline(yintercept = line1, colour="#0066CC",  linetype=2) +
+  geom_text(aes(737,line1,label = "1%", vjust = -0.2, colour="#CC0000")) +
+  labs(x="Number of Cs in CG context", y="Margin of error") +
+  theme_light() +
+  ylim(0,100) +
+  theme(legend.position="none")  
+model_plot_5_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/SamplingModel_5_mouseMOUSE.png",model_plot_5_mouse, width=10, height = 5, dpi=1000)
+
+```
+
+
+# plot on top of each other
+
+```{r}
+Edf_5_mouse$Empirical <- df_5_mouse$Upper_CI*100
+
+colnames(Edf_5_mouse) <- c("E","n","Simulated","Empirical")
+
+combo_df_5_mouse <- melt(Edf_5_mouse, id=c("E", "n"))
+colnames(combo_df_5_mouse) <- c("E","n","Data","Error")
+
+
+combo_plot_5_mouse <- ggplot(combo_df_5_mouse, aes(x=n, y=Error, colour=Data)) +
+  geom_point(size=3, alpha=4/5) +
+  geom_line(alpha=2/3) +
+  theme_light() +
+  ylim(0,50) +
+  ggtitle("58.81% Methylated") +
+  ylab("Margin of Error (±%)") +
+  xlab("CG calls assayed") +
+  scale_colour_manual(values = get_pal("Takahe")[c(2,1)], labels = c("Empirical", "Simulated"))
+combo_plot_5_mouse
+
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/SamplingPlot_overlaidNEW_5_mouseMOUSE.png",combo_plot_5_mouse, width=10, height = 4, dpi=1000)
+```
+
+# Mid 6
+
+# Create list for data to be dumped into
+```{r}
+sample_data_list_6_mouse <- c()
+```
+
+# Sampling loop - creates random samples of sizes between 1 and n
+```{r, message=F}
+# Create an empty data frame to store the results
+results_df_6_mouse <- data.frame(Sample_Size = numeric(), Methylation = numeric())
+
+for (i in c(10, 50, 100, 200, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500)) {
+  for (j in 1:1000) {
+    sample_data_6_mouse <- sample_n(data_mid_6_mouse, i)  
+    methylation_table <- table(sample_data_6_mouse$MethylationCall)
+    methylation <- as.numeric(methylation_table["Z"] / sum(methylation_table))
+    sample_data_list_6_mouse <- cbind(Sample_Size = i, Methylation = methylation)
+    results_df_6_mouse <- rbind(results_df_6_mouse, sample_data_list_6_mouse)
+  }
+}
+```
+
+
+# Plot
+```{r}
+methylation_plot_6_mouse <- ggplot(results_df_6_mouse, aes(x=Sample_Size, y=Methylation)) +
+  geom_point(size=3,alpha=1/3) +
+  theme_light() +
+  ylab("Methylation (%)") +
+  xlab("CG calls assayed")
+methylation_plot_6_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/EmpiricalSampling_Methylation_6_mouseMOUSE.png",methylation_plot_6_mouse, width=10, height = 5, dpi=1000)
+```
+
+
+# Finding most representative methylation call of this dataset
+```{r}
+mean_6_mouse <- mean(results_df_6_mouse$Methylation[14001:15000])
+```
+
+# Making a list of the error to plot (percentage of 100%)
+
+```{r}
+results_df_6_mouse$error <- as.numeric(abs(mean_6_mouse-results_df_6_mouse$Methylation))
+
+error_plot_6_mouse <- ggplot(results_df_6_mouse, aes(x=Sample_Size, y=error)) + 
+  geom_point(size=3,alpha=1/3) +
+  theme_light() +
+  ylab("Margin of Error") +
+  xlab("CG calls assayed")
+error_plot_6_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/EmpiricalSampling_Error_6_mouseMOUSE.png",error_plot_6_mouse, width=10, height = 5, dpi=1000)
+```
+
+# Find 99.5% confidence interval
+```{r}
+cis_6_mouse <- aggregate(error ~ Sample_Size, data = results_df_6_mouse, function(x) quantile(x, c(0.0025, 0.9975)))
+upper_cis_6_mouse <- cis_6_mouse$error[,2]
+
+df_6_mouse <- data.frame(Sample_Size = cis_6_mouse$Sample_Size,
+                 Upper_CI = upper_cis_6_mouse)
+```
+
+
+# Making a list of the error to plot (+/- pp)
+```{r}
+#establishing modelling parameters
+zstar = qnorm(.995) #This defines 99.5% confidence level
+p = mean_6_mouse #The approximate methylation level from this example
+n = c(10, 50, 100, 200, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500) #Numbers of cytosine calls assayed
+E = zstar*sqrt((p*(1-p))/n) #Margin of error calculation given above variables
+
+#coercing into dataframe
+Edf_6_mouse <- as.data.frame(E)
+ndf_6_mouse <- as.data.frame(n)
+Edf_6_mouse$n <- ndf_6_mouse$n
+Edf_6_mouse$Percent <- Edf_6_mouse$E*100
+
+#establishing intercepts
+line5 <- 5
+line25 <- 2.5
+line1 <- 1
+
+model_plot_6_mouse <- ggplot(Edf_6_mouse, aes(x=n, y=Percent)) +
+  geom_point(alpha=2/5) +
+  geom_hline(yintercept = line5, colour="#CC0000", linetype=2) +
+  geom_text(aes(737,line5,label = "5%", vjust = -0.2, colour="#006600")) +
+  geom_hline(yintercept = line25, colour="#006600", linetype=2) +
+  geom_text(aes(737,line25,label = "2.5%", vjust = -0.2, colour="#0066CC")) +
+  geom_hline(yintercept = line1, colour="#0066CC",  linetype=2) +
+  geom_text(aes(737,line1,label = "1%", vjust = -0.2, colour="#CC0000")) +
+  labs(x="Number of Cs in CG context", y="Margin of error") +
+  theme_light() +
+  ylim(0,100) +
+  theme(legend.position="none")  
+model_plot_6_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/SamplingModel_6_mouseMOUSE.png",model_plot_6_mouse, width=10, height = 5, dpi=1000)
+
+```
+
+
+# plot on top of each other
+
+```{r}
+Edf_6_mouse$Empirical <- df_6_mouse$Upper_CI*100
+
+colnames(Edf_6_mouse) <- c("E","n","Simulated","Empirical")
+
+combo_df_6_mouse <- melt(Edf_6_mouse, id=c("E", "n"))
+colnames(combo_df_6_mouse) <- c("E","n","Data","Error")
+
+
+combo_plot_6_mouse <- ggplot(combo_df_6_mouse, aes(x=n, y=Error, colour=Data)) +
+  geom_point(size=3, alpha=4/5) +
+  geom_line(alpha=2/3) +
+  theme_light() +
+  ylim(0,50) +
+  ggtitle("69.60% Methylated") +
+  ylab("Margin of Error (±%)") +
+  xlab("CG calls assayed") +
+  scale_colour_manual(values = get_pal("Takahe")[c(2,1)], labels = c("Empirical", "Simulated"))
+combo_plot_6_mouse
+
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/SamplingPlot_overlaidNEW_6_mouseMOUSE.png",combo_plot_6_mouse, width=10, height = 4, dpi=1000)
+```
+
+# Mid 7
+
+# Create list for data to be dumped into
+```{r}
+sample_data_list_7_mouse <- c()
+```
+
+# Sampling loop - creates random samples of sizes between 1 and n
+```{r, message=F}
+# Create an empty data frame to store the results
+results_df_7_mouse <- data.frame(Sample_Size = numeric(), Methylation = numeric())
+
+for (i in c(10, 50, 100, 200, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500)) {
+  for (j in 1:1000) {
+    sample_data_7_mouse <- sample_n(data_mid_7_mouse, i)  
+    methylation_table <- table(sample_data_7_mouse$MethylationCall)
+    methylation <- as.numeric(methylation_table["Z"] / sum(methylation_table))
+    sample_data_list_7_mouse <- cbind(Sample_Size = i, Methylation = methylation)
+    results_df_7_mouse <- rbind(results_df_7_mouse, sample_data_list_7_mouse)
+  }
+}
+```
+
+
+# Plot
+```{r}
+methylation_plot_7_mouse <- ggplot(results_df_7_mouse, aes(x=Sample_Size, y=Methylation)) +
+  geom_point(size=3,alpha=1/3) +
+  theme_light() +
+  ylab("Methylation (%)") +
+  xlab("CG calls assayed")
+methylation_plot_7_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/EmpiricalSampling_Methylation_7_mouseMOUSE.png",methylation_plot_7_mouse, width=10, height = 5, dpi=1000)
+```
+
+
+# Finding most representative methylation call of this dataset
+```{r}
+mean_7_mouse <- mean(results_df_7_mouse$Methylation[12001:13000])
+```
+
+# Making a list of the error to plot (percentage of 100%)
+
+```{r}
+results_df_7_mouse$error <- as.numeric(abs(mean_7_mouse-results_df_7_mouse$Methylation))
+
+error_plot_7_mouse <- ggplot(results_df_7_mouse, aes(x=Sample_Size, y=error)) + 
+  geom_point(size=3,alpha=1/3) +
+  theme_light() +
+  ylab("Margin of Error") +
+  xlab("CG calls assayed")
+error_plot_7_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/EmpiricalSampling_Error_7_mouseMOUSE.png",error_plot_7_mouse, width=10, height = 5, dpi=1000)
+```
+
+# Find 99.5% confidence interval
+```{r}
+cis_7_mouse <- aggregate(error ~ Sample_Size, data = results_df_7_mouse, function(x) quantile(x, c(0.0025, 0.9975)))
+upper_cis_7_mouse <- cis_7_mouse$error[,2]
+
+df_7_mouse <- data.frame(Sample_Size = cis_7_mouse$Sample_Size,
+                 Upper_CI = upper_cis_7_mouse)
+```
+
+
+# Making a list of the error to plot (+/- pp)
+```{r}
+#establishing modelling parameters
+zstar = qnorm(.995) #This defines 99.5% confidence level
+p = mean_7_mouse #The approximate methylation level from this example
+n = c(10, 50, 100, 200, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500) #Numbers of cytosine calls assayed
+E = zstar*sqrt((p*(1-p))/n) #Margin of error calculation given above variables
+
+#coercing into dataframe
+Edf_7_mouse <- as.data.frame(E)
+ndf_7_mouse <- as.data.frame(n)
+Edf_7_mouse$n <- ndf_7_mouse$n
+Edf_7_mouse$Percent <- Edf_7_mouse$E*100
+
+#establishing intercepts
+line5 <- 5
+line25 <- 2.5
+line1 <- 1
+
+model_plot_7_mouse <- ggplot(Edf_7_mouse, aes(x=n, y=Percent)) +
+  geom_point(alpha=2/5) +
+  geom_hline(yintercept = line5, colour="#CC0000", linetype=2) +
+  geom_text(aes(737,line5,label = "5%", vjust = -0.2, colour="#006600")) +
+  geom_hline(yintercept = line25, colour="#006600", linetype=2) +
+  geom_text(aes(737,line25,label = "2.5%", vjust = -0.2, colour="#0066CC")) +
+  geom_hline(yintercept = line1, colour="#0066CC",  linetype=2) +
+  geom_text(aes(737,line1,label = "1%", vjust = -0.2, colour="#CC0000")) +
+  labs(x="Number of Cs in CG context", y="Margin of error") +
+  theme_light() +
+  ylim(0,100) +
+  theme(legend.position="none")  
+model_plot_7_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/SamplingModel_7_mouseMOUSE.png",model_plot_7_mouse, width=10, height = 5, dpi=1000)
+
+```
+
+
+# plot on top of each other
+
+```{r}
+Edf_7_mouse$Empirical <- df_7_mouse$Upper_CI*100
+
+colnames(Edf_7_mouse) <- c("E","n","Simulated","Empirical")
+
+combo_df_7_mouse <- melt(Edf_7_mouse, id=c("E", "n"))
+colnames(combo_df_7_mouse) <- c("E","n","Data","Error")
+
+
+combo_plot_7_mouse <- ggplot(combo_df_7_mouse, aes(x=n, y=Error, colour=Data)) +
+  geom_point(size=3, alpha=4/5) +
+  geom_line(alpha=2/3) +
+  theme_light() +
+  ylim(0,50) +
+  ggtitle("70.95% Methylated") +
+  ylab("Margin of Error (±%)") +
+  xlab("CG calls assayed") +
+  scale_colour_manual(values = get_pal("Takahe")[c(2,1)], labels = c("Empirical", "Simulated"))
+combo_plot_7_mouse
+
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/SamplingPlot_overlaidNEW_7_mouseMOUSE.png",combo_plot_7_mouse, width=10, height = 4, dpi=1000)
+```
+
+# High 8
+
+# Create list for data to be dumped into
+```{r}
+sample_data_list_8_mouse <- c()
+```
+
+# Sampling loop - creates random samples of sizes between 1 and n
+```{r, message=F}
+# Create an empty data frame to store the results
+results_df_8_mouse <- data.frame(Sample_Size = numeric(), Methylation = numeric())
+
+for (i in c(10, 50, 100, 200, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000, 6500)) {
+  for (j in 1:1000) {
+    sample_data_8_mouse <- sample_n(data_high_8_mouse, i)  
+    methylation_table <- table(sample_data_8_mouse$MethylationCall)
+    methylation <- as.numeric(methylation_table["Z"] / sum(methylation_table))
+    sample_data_list_8_mouse <- cbind(Sample_Size = i, Methylation = methylation)
+    results_df_8_mouse <- rbind(results_df_8_mouse, sample_data_list_8_mouse)
+  }
+}
+```
+
+
+# Plot
+```{r}
+methylation_plot_8_mouse <- ggplot(results_df_8_mouse, aes(x=Sample_Size, y=Methylation)) +
+  geom_point(size=3,alpha=1/3) +
+  theme_light() +
+  ylab("Methylation (%)") +
+  xlab("CG calls assayed")
+methylation_plot_8_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/EmpiricalSampling_Methylation_8_mouseMOUSE.png",methylation_plot_8_mouse, width=10, height = 5, dpi=1000)
+```
+
+
+# Finding most representative methylation call of this dataset
+```{r}
+mean_8_mouse <- mean(results_df_8_mouse$Methylation[16001:17000])
+```
+
+# Making a list of the error to plot (percentage of 100%)
+
+```{r}
+results_df_8_mouse$error <- as.numeric(abs(mean_8_mouse-results_df_8_mouse$Methylation))
+
+error_plot_8_mouse <- ggplot(results_df_8_mouse, aes(x=Sample_Size, y=error)) + 
+  geom_point(size=3,alpha=1/3) +
+  theme_light() +
+  ylab("Margin of Error") +
+  xlab("CG calls assayed")
+error_plot_8_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/EmpiricalSampling_Error_8_mouseMOUSE.png",error_plot_8_mouse, width=10, height = 5, dpi=1000)
+```
+
+# Find 99.5% confidence interval
+```{r}
+cis_8_mouse <- aggregate(error ~ Sample_Size, data = results_df_8_mouse, function(x) quantile(x, c(0.0025, 0.9975)))
+upper_cis_8_mouse <- cis_8_mouse$error[,2]
+
+df_8_mouse <- data.frame(Sample_Size = cis_8_mouse$Sample_Size,
+                 Upper_CI = upper_cis_8_mouse)
+```
+
+
+# Making a list of the error to plot (+/- pp)
+```{r}
+#establishing modelling parameters
+zstar = qnorm(.995) #This defines 99.5% confidence level
+p = mean_8_mouse #The approximate methylation level from this example
+n = c(10, 50, 100, 200, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000, 6500) #Numbers of cytosine calls assayed
+E = zstar*sqrt((p*(1-p))/n) #Margin of error calculation given above variables
+
+#coercing into dataframe
+Edf_8_mouse <- as.data.frame(E)
+ndf_8_mouse <- as.data.frame(n)
+Edf_8_mouse$n <- ndf_8_mouse$n
+Edf_8_mouse$Percent <- Edf_8_mouse$E*100
+
+#establishing intercepts
+line5 <- 5
+line25 <- 2.5
+line1 <- 1
+
+model_plot_8_mouse <- ggplot(Edf_8_mouse, aes(x=n, y=Percent)) +
+  geom_point(alpha=2/5) +
+  geom_hline(yintercept = line5, colour="#CC0000", linetype=2) +
+  geom_text(aes(737,line5,label = "5%", vjust = -0.2, colour="#006600")) +
+  geom_hline(yintercept = line25, colour="#006600", linetype=2) +
+  geom_text(aes(737,line25,label = "2.5%", vjust = -0.2, colour="#0066CC")) +
+  geom_hline(yintercept = line1, colour="#0066CC",  linetype=2) +
+  geom_text(aes(737,line1,label = "1%", vjust = -0.2, colour="#CC0000")) +
+  labs(x="Number of Cs in CG context", y="Margin of error") +
+  theme_light() +
+  ylim(0,100) +
+  theme(legend.position="none")  
+model_plot_8_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/SamplingModel_8_mouseMOUSE.png",model_plot_8_mouse, width=10, height = 5, dpi=1000)
+
+```
+
+
+# plot on top of each other
+
+```{r}
+Edf_8_mouse$Empirical <- df_8_mouse$Upper_CI*100
+
+colnames(Edf_8_mouse) <- c("E","n","Simulated","Empirical")
+
+combo_df_8_mouse <- melt(Edf_8_mouse, id=c("E", "n"))
+colnames(combo_df_8_mouse) <- c("E","n","Data","Error")
+
+
+combo_plot_8_mouse <- ggplot(combo_df_8_mouse, aes(x=n, y=Error, colour=Data)) +
+  geom_point(size=3, alpha=4/5) +
+  geom_line(alpha=2/3) +
+  theme_light() +
+  ggtitle("91.39% Methylated") +
+  ylim(0,50) +
+  ylab("Margin of Error (±%)") +
+  xlab("CG calls assayed") +
+  scale_colour_manual(values = get_pal("Takahe")[c(2,1)], labels = c("Empirical", "Simulated"))
+combo_plot_8_mouse
+
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/SamplingPlot_overlaidNEW_8_mouseMOUSE.png",combo_plot_8_mouse, width=10, height = 4, dpi=1000)
+```
+
+# High 9
+
+# Create list for data to be dumped into
+```{r}
+sample_data_list_9_mouse <- c()
+```
+
+# Sampling loop - creates random samples of sizes between 1 and n
+```{r, message=F}
+# Create an empty data frame to store the results
+results_df_9_mouse <- data.frame(Sample_Size = numeric(), Methylation = numeric())
+
+for (i in c(10, 50, 100, 200, 500, 1000, 1500, 2000, 2500, 3000)) {
+  for (j in 1:1000) {
+    sample_data_9_mouse <- sample_n(data_high_9_mouse, i)  
+    methylation_table <- table(sample_data_9_mouse$MethylationCall)
+    methylation <- as.numeric(methylation_table["Z"] / sum(methylation_table))
+    sample_data_list_9_mouse <- cbind(Sample_Size = i, Methylation = methylation)
+    results_df_9_mouse <- rbind(results_df_9_mouse, sample_data_list_9_mouse)
+  }
+}
+```
+
+
+# Plot
+```{r}
+methylation_plot_9_mouse <- ggplot(results_df_9_mouse, aes(x=Sample_Size, y=Methylation)) +
+  geom_point(size=3,alpha=1/3) +
+  theme_light() +
+  ylab("Methylation (%)") +
+  xlab("CG calls assayed")
+methylation_plot_9_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/EmpiricalSampling_Methylation_9_mouseMOUSE.png",methylation_plot_9_mouse, width=10, height = 5, dpi=1000)
+```
+
+
+# Finding most representative methylation call of this dataset
+```{r}
+mean_9_mouse <- mean(results_df_9_mouse$Methylation[9001:10000])
+```
+
+# Making a list of the error to plot (percentage of 100%)
+
+```{r}
+results_df_9_mouse$error <- as.numeric(abs(mean_9_mouse-results_df_9_mouse$Methylation))
+
+error_plot_9_mouse <- ggplot(results_df_9_mouse, aes(x=Sample_Size, y=error)) + 
+  geom_point(size=3,alpha=1/3) +
+  theme_light() +
+  ylab("Margin of Error") +
+  xlab("CG calls assayed")
+error_plot_9_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/EmpiricalSampling_Error_9_mouseMOUSE.png",error_plot_9_mouse, width=10, height = 5, dpi=1000)
+```
+
+# Find 99.5% confidence interval
+```{r}
+cis_9_mouse <- aggregate(error ~ Sample_Size, data = results_df_9_mouse, function(x) quantile(x, c(0.0025, 0.9975)))
+upper_cis_9_mouse <- cis_9_mouse$error[,2]
+
+df_9_mouse <- data.frame(Sample_Size = cis_9_mouse$Sample_Size,
+                 Upper_CI = upper_cis_9_mouse)
+```
+
+
+# Making a list of the error to plot (+/- pp)
+```{r}
+#establishing modelling parameters
+zstar = qnorm(.995) #This defines 99.5% confidence level
+p = mean_9_mouse #The approximate methylation level from this example
+n = c(10, 50, 100, 200, 500, 1000, 1500, 2000, 2500, 3000) #Numbers of cytosine calls assayed
+E = zstar*sqrt((p*(1-p))/n) #Margin of error calculation given above variables
+
+#coercing into dataframe
+Edf_9_mouse <- as.data.frame(E)
+ndf_9_mouse <- as.data.frame(n)
+Edf_9_mouse$n <- ndf_9_mouse$n
+Edf_9_mouse$Percent <- Edf_9_mouse$E*100
+
+#establishing intercepts
+line5 <- 5
+line25 <- 2.5
+line1 <- 1
+
+model_plot_9_mouse <- ggplot(Edf_9_mouse, aes(x=n, y=Percent)) +
+  geom_point(alpha=2/5) +
+  geom_hline(yintercept = line5, colour="#CC0000", linetype=2) +
+  geom_text(aes(737,line5,label = "5%", vjust = -0.2, colour="#006600")) +
+  geom_hline(yintercept = line25, colour="#006600", linetype=2) +
+  geom_text(aes(737,line25,label = "2.5%", vjust = -0.2, colour="#0066CC")) +
+  geom_hline(yintercept = line1, colour="#0066CC",  linetype=2) +
+  geom_text(aes(737,line1,label = "1%", vjust = -0.2, colour="#CC0000")) +
+  labs(x="Number of Cs in CG context", y="Margin of error") +
+  theme_light() +
+  ylim(0,100) +
+  theme(legend.position="none")  
+model_plot_9_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/SamplingModel_9_mouseMOUSE.png",model_plot_9_mouse, width=10, height = 5, dpi=1000)
+
+```
+
+
+# plot on top of each other
+
+```{r}
+Edf_9_mouse$Empirical <- df_9_mouse$Upper_CI*100
+
+colnames(Edf_9_mouse) <- c("E","n","Simulated","Empirical")
+
+combo_df_9_mouse <- melt(Edf_9_mouse, id=c("E", "n"))
+colnames(combo_df_9_mouse) <- c("E","n","Data","Error")
+
+
+combo_plot_9_mouse <- ggplot(combo_df_9_mouse, aes(x=n, y=Error, colour=Data)) +
+  geom_point(size=3, alpha=4/5) +
+  geom_line(alpha=2/3) +
+  theme_light() +
+  ylim(0,50) +
+   ggtitle("90.97% Methylated") +
+  ylab("Margin of Error (±%)") +
+  xlab("CG calls assayed") +
+  scale_colour_manual(values = get_pal("Takahe")[c(2,1)], labels = c("Empirical", "Simulated"))
+combo_plot_9_mouse
+
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/SamplingPlot_overlaidNEW_9_mouseMOUSE.png",combo_plot_9_mouse, width=10, height = 4, dpi=1000)
+```
+
+# High 10
+
+# Create list for data to be dumped into
+```{r}
+sample_data_list_10_mouse <- c()
+```
+
+# Sampling loop - creates random samples of sizes between 1 and n
+```{r, message=F}
+# Create an empty data frame to store the results
+results_df_10_mouse <- data.frame(Sample_Size = numeric(), Methylation = numeric())
+
+for (i in c(10, 50, 100, 200, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000, 6500)) {
+  for (j in 1:1000) {
+    sample_data_10_mouse <- sample_n(data_high_10_mouse, i)  
+    methylation_table <- table(sample_data_10_mouse$MethylationCall)
+    methylation <- as.numeric(methylation_table["Z"] / sum(methylation_table))
+    sample_data_list_10_mouse <- cbind(Sample_Size = i, Methylation = methylation)
+    results_df_10_mouse <- rbind(results_df_10_mouse, sample_data_list_10_mouse)
+  }
+}
+```
+
+
+# Plot
+```{r}
+methylation_plot_10_mouse <- ggplot(results_df_10_mouse, aes(x=Sample_Size, y=Methylation)) +
+  geom_point(size=3,alpha=1/3) +
+  theme_light() +
+  ylab("Methylation (%)") +
+  xlab("CG calls assayed")
+methylation_plot_10_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/EmpiricalSampling_Methylation_10_mouseMOUSE.png",methylation_plot_10_mouse, width=10, height = 5, dpi=1000)
+```
+
+
+# Finding most representative methylation call of this dataset
+```{r}
+mean_10_mouse <- mean(results_df_10_mouse$Methylation[16001:17000])
+```
+
+# Making a list of the error to plot (percentage of 100%)
+
+```{r}
+results_df_10_mouse$error <- as.numeric(abs(mean_10_mouse-results_df_10_mouse$Methylation))
+
+error_plot_10_mouse <- ggplot(results_df_10_mouse, aes(x=Sample_Size, y=error)) + 
+  geom_point(size=3,alpha=1/3) +
+  theme_light() +
+  ylab("Margin of Error") +
+  xlab("CG calls assayed")
+error_plot_10_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/EmpiricalSampling_Error_10_mouseMOUSE.png",error_plot_10_mouse, width=10, height = 5, dpi=1000)
+```
+
+# Find 99.5% confidence interval
+```{r}
+cis_10_mouse <- aggregate(error ~ Sample_Size, data = results_df_10_mouse, function(x) quantile(x, c(0.0025, 0.9975)))
+upper_cis_10_mouse <- cis_10_mouse$error[,2]
+
+df_10_mouse <- data.frame(Sample_Size = cis_10_mouse$Sample_Size,
+                 Upper_CI = upper_cis_10_mouse)
+```
+
+
+# Making a list of the error to plot (+/- pp)
+```{r}
+#establishing modelling parameters
+zstar = qnorm(.995) #This defines 99.5% confidence level
+p = mean_10_mouse #The approximate methylation level from this example
+n = c(10, 50, 100, 200, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000, 6500) #Numbers of cytosine calls assayed
+E = zstar*sqrt((p*(1-p))/n) #Margin of error calculation given above variables
+
+#coercing into dataframe
+Edf_10_mouse <- as.data.frame(E)
+ndf_10_mouse <- as.data.frame(n)
+Edf_10_mouse$n <- ndf_10_mouse$n
+Edf_10_mouse$Percent <- Edf_10_mouse$E*100
+
+#establishing intercepts
+line5 <- 5
+line25 <- 2.5
+line1 <- 1
+
+model_plot_10_mouse <- ggplot(Edf_10_mouse, aes(x=n, y=Percent)) +
+  geom_point(alpha=2/5) +
+  geom_hline(yintercept = line5, colour="#CC0000", linetype=2) +
+  geom_text(aes(737,line5,label = "5%", vjust = -0.2, colour="#006600")) +
+  geom_hline(yintercept = line25, colour="#006600", linetype=2) +
+  geom_text(aes(737,line25,label = "2.5%", vjust = -0.2, colour="#0066CC")) +
+  geom_hline(yintercept = line1, colour="#0066CC",  linetype=2) +
+  geom_text(aes(737,line1,label = "1%", vjust = -0.2, colour="#CC0000")) +
+  labs(x="Number of Cs in CG context", y="Margin of error") +
+  theme_light() +
+  ylim(0,100) +
+  theme(legend.position="none")  
+model_plot_10_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/SamplingModel_10_mouseMOUSE.png",model_plot_10_mouse, width=10, height = 5, dpi=1000)
+
+```
+
+
+# plot on top of each other
+
+```{r}
+Edf_10_mouse$Empirical <- df_10_mouse$Upper_CI*100
+
+colnames(Edf_10_mouse) <- c("E","n","Simulated","Empirical")
+
+combo_df_10_mouse <- melt(Edf_10_mouse, id=c("E", "n"))
+colnames(combo_df_10_mouse) <- c("E","n","Data","Error")
+
+
+combo_plot_10_mouse <- ggplot(combo_df_10_mouse, aes(x=n, y=Error, colour=Data)) +
+  geom_point(size=3, alpha=4/5) +
+  geom_line(alpha=2/3) +
+  theme_light() +
+  ylim(0,50) +
+  ggtitle("90.85% Methylated") +
+  ylab("Margin of Error (±%)") +
+  xlab("CG calls assayed") +
+  scale_colour_manual(values = get_pal("Takahe")[c(2,1)], labels = c("Empirical", "Simulated"))
+combo_plot_10_mouse
+
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/SamplingPlot_overlaidNEW_10_mouseMOUSE.png",combo_plot_10_mouse, width=10, height = 4, dpi=1000)
+```
+
+
+# High 11
+
+# Create list for data to be dumped into
+```{r}
+sample_data_list_11_mouse <- c()
+```
+
+# Sampling loop - creates random samples of sizes between 1 and n
+```{r, message=F}
+# Create an empty data frame to store the results
+results_df_11_mouse <- data.frame(Sample_Size = numeric(), Methylation = numeric())
+
+for (i in c(10, 50, 100, 200, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000)) {
+  for (j in 1:1000) {
+    sample_data_11_mouse <- sample_n(data_high_11_mouse, i)  
+    methylation_table <- table(sample_data_11_mouse$MethylationCall)
+    methylation <- as.numeric(methylation_table["Z"] / sum(methylation_table))
+    sample_data_list_11_mouse <- cbind(Sample_Size = i, Methylation = methylation)
+    results_df_11_mouse <- rbind(results_df_11_mouse, sample_data_list_11_mouse)
+  }
+}
+```
+
+
+# Plot
+```{r}
+methylation_plot_11_mouse <- ggplot(results_df_11_mouse, aes(x=Sample_Size, y=Methylation)) +
+  geom_point(size=3,alpha=1/3) +
+  theme_light() +
+  ylab("Methylation (%)") +
+  xlab("CG calls assayed")
+methylation_plot_11_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/EmpiricalSampling_Methylation_11_mouseMOUSE.png",methylation_plot_11_mouse, width=10, height = 5, dpi=1000)
+```
+
+
+# Finding most representative methylation call of this dataset
+```{r}
+mean_11_mouse <- mean(results_df_11_mouse$Methylation[15001:16000])
+```
+
+# Making a list of the error to plot (percentage of 100%)
+
+```{r}
+results_df_11_mouse$error <- as.numeric(abs(mean_11_mouse-results_df_11_mouse$Methylation))
+
+error_plot_11_mouse <- ggplot(results_df_11_mouse, aes(x=Sample_Size, y=error)) + 
+  geom_point(size=3,alpha=1/3) +
+  theme_light() +
+  ylab("Margin of Error") +
+  xlab("CG calls assayed")
+error_plot_11_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/EmpiricalSampling_Error_11_mouseMOUSE.png",error_plot_11_mouse, width=10, height = 5, dpi=1000)
+```
+
+# Find 99.5% confidence interval
+```{r}
+cis_11_mouse <- aggregate(error ~ Sample_Size, data = results_df_11_mouse, function(x) quantile(x, c(0.0025, 0.9975)))
+upper_cis_11_mouse <- cis_11_mouse$error[,2]
+
+df_11_mouse <- data.frame(Sample_Size = cis_11_mouse$Sample_Size,
+                 Upper_CI = upper_cis_11_mouse)
+```
+
+
+# Making a list of the error to plot (+/- pp)
+```{r}
+#establishing modelling parameters
+zstar = qnorm(.995) #This defines 99.5% confidence level
+p = mean_11_mouse #The approximate methylation level from this example
+n = c(10, 50, 100, 200, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000) #Numbers of cytosine calls assayed
+E = zstar*sqrt((p*(1-p))/n) #Margin of error calculation given above variables
+
+#coercing into dataframe
+Edf_11_mouse <- as.data.frame(E)
+ndf_11_mouse <- as.data.frame(n)
+Edf_11_mouse$n <- ndf_11_mouse$n
+Edf_11_mouse$Percent <- Edf_11_mouse$E*100
+
+#establishing intercepts
+line5 <- 5
+line25 <- 2.5
+line1 <- 1
+
+model_plot_11_mouse <- ggplot(Edf_11_mouse, aes(x=n, y=Percent)) +
+  geom_point(alpha=2/5) +
+  geom_hline(yintercept = line5, colour="#CC0000", linetype=2) +
+  geom_text(aes(737,line5,label = "5%", vjust = -0.2, colour="#006600")) +
+  geom_hline(yintercept = line25, colour="#006600", linetype=2) +
+  geom_text(aes(737,line25,label = "2.5%", vjust = -0.2, colour="#0066CC")) +
+  geom_hline(yintercept = line1, colour="#0066CC",  linetype=2) +
+  geom_text(aes(737,line1,label = "1%", vjust = -0.2, colour="#CC0000")) +
+  labs(x="Number of Cs in CG context", y="Margin of error") +
+  theme_light() +
+  ylim(0,100) +
+  theme(legend.position="none")  
+model_plot_11_mouse
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/SamplingModel_11_mouseMOUSE.png",model_plot_11_mouse, width=10, height = 5, dpi=1000)
+
+```
+
+
+# plot on top of each other
+
+```{r}
+Edf_11_mouse$Empirical <- df_11_mouse$Upper_CI*100
+
+colnames(Edf_11_mouse) <- c("E","n","Simulated","Empirical")
+
+combo_df_11_mouse <- melt(Edf_11_mouse, id=c("E", "n"))
+colnames(combo_df_11_mouse) <- c("E","n","Data","Error")
+
+combo_plot_11_mouse <- ggplot(combo_df_11_mouse, aes(x=n, y=Error, colour=Data)) +
+  geom_point(size=3, alpha=4/5) +
+  geom_line(alpha=2/3) +
+  theme_light() +
+  ylim(0,50) +
+   ggtitle("90.72% Methylated") +
+  ylab("Margin of Error (±%)") +
+  xlab("CG calls assayed") +
+  scale_colour_manual(values = get_pal("Takahe")[c(2,1)], labels = c("Empirical", "Simulated"))
+combo_plot_11_mouse
+
+#ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/SamplingPlot_overlaidNEW_11_mouseMOUSE.png",combo_plot_11_mouse, width=10, height = 4, dpi=1000)
+```
+
+
+#plot all together
+
+```{r}
+combo_plot_1_mouse_leg <- combo_plot_1_mouse + theme(legend.position="none")
+combo_plot_2_mouse_leg <- combo_plot_2_mouse + theme(legend.position="none")
+combo_plot_3_mouse_leg <- combo_plot_3_mouse + theme(legend.position="none")
+combo_plot_4_mouse_leg <- combo_plot_4_mouse + theme(legend.position="none")
+combo_plot_5_mouse_leg <- combo_plot_5_mouse + theme(legend.position="none")
+combo_plot_6_mouse_leg <- combo_plot_6_mouse + theme(legend.position="none")
+combo_plot_7_mouse_leg <- combo_plot_7_mouse + theme(legend.position="none")
+combo_plot_8_mouse_leg <- combo_plot_8_mouse + theme(legend.position="none")
+combo_plot_9_mouse_leg <- combo_plot_9_mouse + theme(legend.position="none")
+combo_plot_10_mouse_leg <- combo_plot_10_mouse + theme(legend.position="none")
+combo_plot_11_mouse_leg <- combo_plot_11_mouse + theme(legend.position="none")
+
+combocomboplot_MOUSE <- cowplot::plot_grid(combo_plot_1_mouse_leg, NULL, NULL,combo_plot_2_mouse_leg, combo_plot_3_mouse_leg, combo_plot_4_mouse_leg,combo_plot_5_mouse_leg, combo_plot_6_mouse_leg, combo_plot_7_mouse_leg,combo_plot_10_mouse_leg, combo_plot_9_mouse_leg, combo_plot_8_mouse_leg, nrow=4)
+combocomboplot_MOUSE
+
+
+legend_b <- cowplot::get_legend(
+  combo_plot_1_mouse + 
+    guides(color = guide_legend(nrow = 1)) +
+    theme(legend.position = "bottom")
+)
+
+combocomboplot_MOUSE2 <- cowplot::plot_grid(combocomboplot_MOUSE, legend_b, rel_heights = c(1,0.03), nrow=2)
+combocomboplot_MOUSE2
+
+ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/SamplingPlot_overlaid_all10samples_NewMayMOUSE_2.png",combocomboplot_MOUSE2, width=7, height = 10, dpi=1000)
+
+```
+

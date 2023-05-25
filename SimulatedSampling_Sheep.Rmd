@@ -1,0 +1,88 @@
+---
+title: "Simulated Sampling - 75% methylated sample (sheep)"
+author: "Victoria Sugrue"
+date: 'Last updated: 15 May 2023'
+output:
+  pdf_document:
+    toc: no
+    toc_depth: 5
+    df_print: kable
+    latex_engine: xelatex
+  html_document:
+    toc: no
+    toc_float: yes
+    toc_depth: 6
+  word_document:
+    toc: no
+    toc_depth: '6'
+subtitle: ' '
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Theoretical Prediction of Margin of Error
+
+$$ 
+ϵ= z^*\sqrt\frac{p(1-p)}{n} 
+$$ 
+
+p=sample proportion, 
+n=sample size, 
+z*= confidence level
+
+```{r}
+zstar = qnorm(.995) #This defines 99.5% confidence level
+p = 0.75 #The approximate methylation level from this example
+n = 500 #Number of cytosine calls assayed
+zstar*sqrt((p*(1-p))/n) #Margin of error calculation given above variables
+```
+
+Alternatively, calculating the number of calls required to achieve a given margin of error
+
+#### ±5% error
+```{r}
+zstar = qnorm(.995) #This defines 99.5% confidence level
+p = 0.75 #The approximate methylation level from this example
+E = 0.05 #Margin of error, 5%
+zstar^2 * p * (1-p) / E^2 # Calculates cytosine calls required to achieve given margin of error
+```
+
+#### ±2.5% error
+```{r}
+zstar = qnorm(.995) 
+p = 0.75
+E = 0.025 #Margin of error, 2.5%
+zstar^2 * p * (1-p) / E^2 
+```
+
+#### ±2% error
+```{r}
+zstar = qnorm(.995) 
+p = 0.75
+E = 0.02 #Margin of error, 2%
+zstar^2 * p * (1-p) / E^2 
+```
+
+#### ±1.5% error
+```{r}
+zstar = qnorm(.995) 
+p = 0.75
+E = 0.015 #Margin of error, 1.5%
+zstar^2 * p * (1-p) / E^2 
+```
+
+#### ±1% error
+```{r}
+zstar = qnorm(.995) 
+p = 0.75
+E = 0.01 #Margin of error, 1%
+zstar^2 * p * (1-p) / E^2 
+```
+
+
+
+
+
+
+
