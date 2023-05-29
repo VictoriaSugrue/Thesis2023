@@ -1,7 +1,7 @@
 ---
 title: "Mouse Androgen Clock Construction"
 author: "Victoria Sugrue"
-date: 'Last updated: 19 May 2023'
+date: 'Last updated: 30 May 2023'
 output:
   word_document:
     toc: no
@@ -278,20 +278,6 @@ MAE_tail6 # 0.250
 
 ```{r}
 cor(fitted$YPMP_6, fitted$Fit_YPMP_6, method="pearson")
-
-tail6fit <- ggplot(fitted, aes(x=YPMP_6, y=Fit_YPMP_6)) +
-  geom_point(size=4, alpha=3/4, colour="#313657") + 
-  geom_smooth(method="lm", se=F, colour="#DD3C51") +
-  geom_abline(linetype="dashed") +
-  theme_light() +
-  ylab("Model AndroAge (Years)") +
-  xlab("Years Post Male Puberty (YPMP)") +
-    labs(title = "Tail, 6 weeks",
-              subtitle = "MAE=0.250, cor=0.811") +
-  theme(plot.title = element_text(hjust = 0.5)) +
-  theme(plot.subtitle = element_text(hjust = 0.5))
-tail6fit
-ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/tail6fit.png",tail6fit, width=8, height = 7, dpi=1000)
 ```
 
 
@@ -346,6 +332,22 @@ fittedLOO["YPMP_6"] <- male_tail$YPMP_6
 
 tail6LOO_MAE <- as.data.frame(Metrics::mae(actual=fittedLOO$YPMP_6, predicted=fittedLOO$pred))
 tail6LOO_MAE # 0.280
+
+cor(fittedLOO$obs, fittedLOO$pred, method="pearson")
+
+tail6fit <- ggplot(fitted, aes(x=YPMP_6, y=Fit_YPMP_6)) +
+  geom_point(size=4, alpha=3/4, colour="#313657") + 
+  geom_smooth(method="lm", se=F, colour="#DD3C51") +
+  geom_abline(linetype="dashed") +
+  theme_light() +
+  ylab("Model AndroAge (Years)") +
+  xlab("Years Post Male Puberty (YPMP)") +
+    labs(title = "Tail, 6 weeks",
+              subtitle = "MAE=0.280, cor=0.770") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.subtitle = element_text(hjust = 0.5))
+tail6fit
+ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/tail6fit.png",tail6fit, width=8, height = 7, dpi=1000)
 ```
 
 
@@ -414,21 +416,6 @@ MAE_tail8 # 0.253
 ```
 ```{r}
 cor(fitted$YPMP_8, fitted$Fit_YPMP_8, method="pearson")
-
-
-tail8fit <- ggplot(fitted, aes(x=YPMP_8, y=Fit_YPMP_8)) +
-  geom_point(size=4, alpha=3/4, colour="#313657") + 
-  geom_smooth(method="lm", se=F, colour="#DD3C51") +
-  geom_abline(linetype="dashed") +
-  theme_light() +
-  ylab("Model AndroAge (Years)") +
-  xlab("Years Post Male Puberty (YPMP)") +
-    labs(title = "Tail, 8 weeks",
-              subtitle = "MAE=0.253, cor=0.803") +
-  theme(plot.title = element_text(hjust = 0.5)) +
-  theme(plot.subtitle = element_text(hjust = 0.5))
-tail8fit
-ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/tail8fit.png",tail8fit, width=8, height = 7, dpi=1000)
 ```
 
 # Testing the model fit further: 
@@ -481,6 +468,23 @@ fittedLOO["YPMP_8"] <- male_tail$YPMP_8
 
 tail8LOO_MAE <- as.data.frame(Metrics::mae(actual=fittedLOO$YPMP_8, predicted=fittedLOO$pred))
 tail8LOO_MAE # 0.283
+
+cor(fittedLOO$pred, fittedLOO$obs, method="pearson")
+
+
+tail8fit <- ggplot(fitted, aes(x=YPMP_8, y=Fit_YPMP_8)) +
+  geom_point(size=4, alpha=3/4, colour="#313657") + 
+  geom_smooth(method="lm", se=F, colour="#DD3C51") +
+  geom_abline(linetype="dashed") +
+  theme_light() +
+  ylab("Model AndroAge (Years)") +
+  xlab("Years Post Male Puberty (YPMP)") +
+    labs(title = "Tail, 8 weeks",
+              subtitle = "MAE=0.283, cor=0.760") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.subtitle = element_text(hjust = 0.5))
+tail8fit
+ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/tail8fit.png",tail8fit, width=8, height = 7, dpi=1000)
 ```
 
 
@@ -533,20 +537,6 @@ MAE_muscle6 # 0.516
 ```{r}
 cor(fitted$YPMP_6, fitted$Fit_YPMP_6, method="pearson")
 
-
-muscle6fit <- ggplot(fitted, aes(x=YPMP_6, y=Fit_YPMP_6)) +
-  geom_point(size=4, alpha=3/4, colour="#313657") + 
-  geom_smooth(method="lm", se=F, colour="#DD3C51") +
-  geom_abline(linetype="dashed") +
-  theme_light() +
-  ylab("Model AndroAge (Years)") +
-  xlab("Years Post Male Puberty (YPMP)") +
-    labs(title = "Muscle, 6 weeks",
-              subtitle = "MAE=0.516, cor=0.490") +
-  theme(plot.title = element_text(hjust = 0.5)) +
-  theme(plot.subtitle = element_text(hjust = 0.5))
-muscle6fit
-ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/muscle6fit.png",muscle6fit, width=8, height = 7, dpi=1000)
 ```
 
 
@@ -601,6 +591,23 @@ fittedLOO["YPMP_6"] <- male_muscle$YPMP_6
 
 muscle6LOO_MAE <- as.data.frame(Metrics::mae(actual=fittedLOO$YPMP_6, predicted=fittedLOO$pred))
 muscle6LOO_MAE # 0.55
+
+cor(fittedLOO$pred, fittedLOO$obs, method="pearson")
+
+
+muscle6fit <- ggplot(fitted, aes(x=YPMP_6, y=Fit_YPMP_6)) +
+  geom_point(size=4, alpha=3/4, colour="#313657") + 
+  geom_smooth(method="lm", se=F, colour="#DD3C51") +
+  geom_abline(linetype="dashed") +
+  theme_light() +
+  ylab("Model AndroAge (Years)") +
+  xlab("Years Post Male Puberty (YPMP)") +
+    labs(title = "Muscle, 6 weeks",
+              subtitle = "MAE=0.555, cor=0.394") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.subtitle = element_text(hjust = 0.5))
+muscle6fit
+ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/muscle6fit.png",muscle6fit, width=8, height = 7, dpi=1000)
 ```
 
 
@@ -676,20 +683,6 @@ MAE_muscle8 # 0.52
 ```{r}
 cor(fitted$YPMP_8, fitted$Fit_YPMP_8, method="pearson")
 
-
-muscle8fit <- ggplot(fitted, aes(x=YPMP_8, y=Fit_YPMP_8)) +
-  geom_point(size=4, alpha=3/4, colour="#313657") + 
-  geom_smooth(method="lm", se=F, colour="#DD3C51") +
-  geom_abline(linetype="dashed") +
-  theme_light() +
-  ylab("Model AndroAge (Years)") +
-  xlab("Years Post Male Puberty (YPMP)") +
-    labs(title = "Muscle, 8 weeks",
-              subtitle = "MAE=0.516, cor=0.480") +
-  theme(plot.title = element_text(hjust = 0.5)) +
-  theme(plot.subtitle = element_text(hjust = 0.5))
-muscle8fit
-ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/muscle8fit.png",muscle8fit, width=8, height = 7, dpi=1000)
 ```
 
 # Testing the model fit further: 
@@ -742,6 +735,23 @@ fittedLOO["YPMP_8"] <- male_muscle$YPMP_8
 
 muscle8LOO_MAE <- as.data.frame(Metrics::mae(actual=fittedLOO$YPMP_8, predicted=fittedLOO$pred))
 muscle8LOO_MAE # 0.55
+
+cor(fittedLOO$obs, fittedLOO$pred, method="pearson")
+
+
+muscle8fit <- ggplot(fitted, aes(x=YPMP_8, y=Fit_YPMP_8)) +
+  geom_point(size=4, alpha=3/4, colour="#313657") + 
+  geom_smooth(method="lm", se=F, colour="#DD3C51") +
+  geom_abline(linetype="dashed") +
+  theme_light() +
+  ylab("Model AndroAge (Years)") +
+  xlab("Years Post Male Puberty (YPMP)") +
+    labs(title = "Muscle, 8 weeks",
+              subtitle = "MAE=0.555, cor=0.381") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.subtitle = element_text(hjust = 0.5))
+muscle8fit
+ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/muscle8fit.png",muscle8fit, width=8, height = 7, dpi=1000)
 ```
 
 
