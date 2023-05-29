@@ -1,7 +1,7 @@
 ---
 title: "Sheep Androgen Clock Construction - BBA-seq approach"
 author: "Victoria Sugrue"
-date: 'Last updated: 15 May 2023'
+date: 'Last updated: 30 May 2023'
 output:
   word_document:
     toc: yes
@@ -257,26 +257,8 @@ MAE_model_5p <- as.data.frame(Metrics::mae(actual=fitted_5$YPMP, predicted=fitte
 MAE_model_5p # 0.569
 ```
 
-# Plot 
-
 ```{r}
 cor(fitted_5$YPMP, fitted_5$Fit_AndroAge, method="pearson")
-
-ramfit5 <- ggplot(fitted_5, aes(x=YPMP, y=Fit_AndroAge)) +
-  geom_point(size=4, alpha=3/4, colour="#313657") + 
-  geom_smooth(method="lm", se=F, colour="#DD3C51") +
-  geom_abline(linetype="dashed") +
-  theme_light() +
-  ylab("Model AndroAge (Years)") +
-  xlab("Years Post Male Puberty (YPMP)") +
-  labs(title = "Ram androgen clock fit (model_5p), trained on all",
-              subtitle = "MAE=0.569, cor=0.912") +
-  theme(plot.title = element_text(hjust = 0.5)) +
-  theme(plot.subtitle = element_text(hjust = 0.5))
-
-ramfit5
-ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/5errormodel_ramFit.png",ramfit5, width=8, height = 7, dpi=1000)
-
 ```
 
 
@@ -428,24 +410,9 @@ fitted_25$Fit_AndroAge <- as.numeric(fitted_25$`model_25p$fitted.values`)
 MAE_model_25p <- as.data.frame(Metrics::mae(actual=fitted_25$YPMP, predicted=fitted_25$`model_25p$fitted.values`))
 MAE_model_25p # 0.535
 ```
-# Plot 
 
 ```{r}
 cor(fitted_25$YPMP, fitted_25$Fit_AndroAge, method="pearson")
-
-ramfit25 <- ggplot(fitted_25, aes(x=YPMP, y=Fit_AndroAge)) +
-  geom_point(size=4, alpha=3/4, colour="#313657") + 
-  geom_smooth(method="lm", se=F, colour="#DD3C51") +
-  geom_abline(linetype="dashed") +
-  theme_light() +
-  ylab("Model AndroAge (Years)") +
-  xlab("Years Post Male Puberty (YPMP)") +
-    labs(title = "Ram androgen clock fit (model_25p), trained on all",
-              subtitle = "MAE=0.535, cor=0.906") +
-  theme(plot.title = element_text(hjust = 0.5)) +
-  theme(plot.subtitle = element_text(hjust = 0.5))
-ramfit25
-ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/25errormodel_ramFit.png",ramfit25, width=8, height = 7, dpi=1000)
 ```
 
 # Testing the model fit further: 
@@ -596,25 +563,9 @@ MAE_model_2p <- as.data.frame(Metrics::mae(actual=fitted_2$YPMP, predicted=fitte
 MAE_model_2p # 0.490
 ```
 
-# Plot 
 
 ```{r}
 cor(fitted_2$YPMP, fitted_2$Fit_AndroAge, method="pearson")
-
-ramfit2 <- ggplot(fitted_2, aes(x=YPMP, y=Fit_AndroAge)) +
-  geom_point(size=4, alpha=3/4, colour="#313657") + 
-  geom_smooth(method="lm", se=F, colour="#DD3C51") +
-  geom_abline(linetype="dashed") +
-  theme_light() +
-  ylab("AndroAge predicted by model (Years)") +
-  xlab("Years Post Male Puberty (YPMP)") +
-  labs(title = "Ram androgen clock fit (model_2p), trained on all",
-              subtitle = "MAE=0.490, cor=0.908") +
-    theme(plot.title = element_text(hjust = 0.5)) +
-  theme(plot.subtitle = element_text(hjust = 0.5))
-ramfit2
-ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/2errormodel_ramFit.png",ramfit2, width=8, height = 7, dpi=1000)
-
 ```
 
 # Testing the model fit further: 
@@ -766,24 +717,8 @@ MAE_model_15p <- as.data.frame(Metrics::mae(actual=fitted_15$YPMP, predicted=fit
 MAE_model_15p # 0.499
 ```
 
-# Plot 
-
 ```{r}
 cor(fitted_15$YPMP, fitted_15$Fit_AndroAge, method="pearson")
-
-ramfit15 <- ggplot(fitted_15, aes(x=YPMP, y=Fit_AndroAge)) +
-  geom_point(size=4, alpha=3/4, colour="#313657") + 
-  geom_smooth(method="lm", se=F, colour="#DD3C51") +
-  geom_abline(linetype="dashed") +
-  theme_light() +
-  ylab("AndroAge predicted by model (Years)") +
-  xlab("Years Post Male Puberty (YPMP)") +
-    labs(title = "Ram androgen clock fit (model_15p), trained on all",
-              subtitle = "MAE=0.499, cor=0.924") +
-    theme(plot.title = element_text(hjust = 0.5)) +
-  theme(plot.subtitle = element_text(hjust = 0.5))
-ramfit15
-ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/15errormodel_ramFit.png",ramfit15, width=8, height = 7, dpi=1000)
 
 ```
 
