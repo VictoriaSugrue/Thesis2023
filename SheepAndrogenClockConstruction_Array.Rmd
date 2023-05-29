@@ -1,7 +1,7 @@
 ---
 title: "Sheep Androgen Clock Construction - Array"
 author: "Victoria Sugrue"
-date: 'Last updated: 16 May 2023'
+date: 'Last updated: 30 May 2023'
 output:
   word_document:
     toc: yes
@@ -156,26 +156,8 @@ MAE_model_array1 <- as.data.frame(Metrics::mae(actual=fitted_array$YPMP, predict
 MAE_model_array1 # 0.496
 ```
 
-# Plot 
-
 ```{r}
 cor(fitted_array$YPMP, fitted_array$Fit_AndroAge, method="pearson")
-
-
-ramfit_array <- ggplot(fitted_array, aes(x=YPMP, y=Fit_AndroAge)) +
-  geom_point(size=4, alpha=3/4, colour="#313657") + 
-  geom_smooth(method="lm", se=F, colour="#DD3C51") +
-  geom_abline(linetype="dashed") +
-  theme_light() +
-  ylab("Model AndroAge (Years)") +
-  xlab("Years Post Male Puberty (YPMP)") +
-  labs(title = "Array; Trained and tested on all",
-              subtitle = "MAE=0.496, cor=0.911") +
-  theme(plot.title = element_text(hjust = 0.5)) +
-  theme(plot.subtitle = element_text(hjust = 0.5))
-ramfit_array
-ggsave("/Users/victoriasugrue/Dropbox (Otago University)/00_ThesisWriting/Figures/arraymodel_ramFit.png",ramfit_array, width=8, height = 7, dpi=1000)
-
 ```
 
 
